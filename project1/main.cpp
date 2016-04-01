@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -40,15 +41,32 @@ int main() {
 
 	char nextChar;
 	//commands
-	while(1){ //not exit
+	//while(1){ //not exit
 		//characters
-		while(nextChar != '\n'){//not enter
-			cout << nextChar << endl;
-			cin >> nextChar;
-		}
-	}
+		
+                read(STDIN_FILENO, &nextChar, 1);
+                
+                while(nextChar != 0x0A){//not enter
+                    switch(nextChar) {
+                        case 0x08 : { //backspace
+
+
+                        }
+                                                        
+
+                    }
+
+
+                    read(STDIN_FILENO, &nextChar, 1);
+
+                    
+
+
+                }
+	//}
 
 	ResetCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
+        return 1;
 }
 
 //References:
