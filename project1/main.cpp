@@ -39,6 +39,14 @@ void printNewLine() {
     write(STDOUT_FILENO, &newLine, 1);
 }
 
+void executeInvalidCommand(string command) {
+    printNewLine();
+    char *temp = "Failed to execute ";
+    write(STDOUT_FILENO, temp, strlen(temp));
+    write(STDOUT_FILENO, command.c_str(), strlen(command.c_str()));
+    printNewLine();
+}
+
 void executePwd() { // to be forked?
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
@@ -46,6 +54,36 @@ void executePwd() { // to be forked?
     write(STDOUT_FILENO, directoryName, strlen(directoryName));
     printNewLine();
 }
+
+void executeCd(string parameterString) {
+    if ((parameterString.length() == 0) || (parameterString[0] == ' ')) {
+        printNewLine();
+        
+        char const *directoryName;
+        
+        if (parameterString.length() == 0) {
+            directoryName = getenv("HOME");
+        }
+        else {
+        
+            directoryName = (parameterString.substr(1, parameterString.length()-1)).c_str();
+        }
+        
+        int success = chdir(directoryName);
+        
+        if (success == -1) {
+            char *errorMessage = "Error changing directory.";
+            write(STDOUT_FILENO, errorMessage, strlen(errorMessage));
+            printNewLine();
+        }
+    }
+    
+    else {
+        executeInvalidCommand("");
+    }
+
+}
+
 
 void printShellPrompt() {
     char *path = NULL;
@@ -77,26 +115,26 @@ void printShellPrompt() {
     write(STDOUT_FILENO, temp, strlen(temp));
 }
 
-void executeInvalidCommand(string command) {
-    printNewLine();
-    char *temp = "Failed to execute ";
-    write(STDOUT_FILENO, temp, strlen(temp));
-    write(STDOUT_FILENO, command.c_str(), strlen(command.c_str()));
-    printNewLine();
-}
-
 void directCommand(string command) {
-    if (command == "cd") {
-        
+    string commandType = command.substr (0,2);
+    string parameterString;
+    
+    if (command.length() > 2) {
+        parameterString = command.substr (2, (command.length() - 2));
     }
-    else if (command == "ls") {
-        
+    
+    if (commandType == "cd") {
+        //cout << "cd" << endl;
+        executeCd(parameterString);
+    }
+    else if (commandType == "ls") {
+        cout << "ls" << endl;
     }
     else if (command == "pwd") {
         executePwd();
     }
-    else if (command == "ff") {
-        
+    else if (commandType == "ff") {
+        cout << "ff" << endl;
     }
     else if (command == "exit") {
         printNewLine();
