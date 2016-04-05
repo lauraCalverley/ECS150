@@ -73,10 +73,17 @@ void printShellPrompt() {
         write(STDOUT_FILENO, path, strlen(path));
     }
     
-    temp = "%";
+    temp = "% ";
     write(STDOUT_FILENO, temp, strlen(temp));
 }
 
+void executeInvalidCommand(string command) {
+    printNewLine();
+    char *temp = "Failed to execute ";
+    write(STDOUT_FILENO, temp, strlen(temp));
+    write(STDOUT_FILENO, command.c_str(), strlen(command.c_str()));
+    printNewLine();
+}
 
 void directCommand(string command) {
     if (command == "cd") {
@@ -93,6 +100,9 @@ void directCommand(string command) {
     }
     else if (command == "exit") {
         printNewLine();
+    }
+    else {
+        executeInvalidCommand(command);
     }
 }
 
