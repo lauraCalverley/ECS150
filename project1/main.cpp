@@ -48,19 +48,24 @@ int main() {
                 
                 while(nextChar != 0x0A){//not enter
                     switch(nextChar) {
-                        case 0x08 : { //backspace
-
-
+                        case 0x08: //backspace
+                        case 0x7F: { //delete
+                            cout << "delete/backspace" << endl;
+                            break;
                         }
-                                                        
+                        case 0x1B: { // escape character
+                            cout << "arrow" << endl;
+                            break;
+                        }
+                        default: { // input chars
+                            cout << "other char" << endl;
+                            break;
+                        }
 
                     }
 
 
                     read(STDIN_FILENO, &nextChar, 1);
-
-                    
-
 
                 }
 	//}
