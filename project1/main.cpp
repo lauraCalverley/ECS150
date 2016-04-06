@@ -50,11 +50,15 @@ string executeBackspace(string command) {
 vector<char *> parseParameters(string parameterString, char *token) {
     vector<char *> parameterVector;
     char const * parameterCharArray = parameterString.c_str();
-    strtok((char *)parameterCharArray, token);
-    while (parameterVector.back() != NULL) {
+    char *tokenFound = strtok((char *)parameterCharArray, token);
+    
+    while (parameterVector.empty() || parameterVector.back() != NULL) {
         parameterVector.push_back(strtok(NULL, token));
     }
-    parameterVector.pop_back();
+    
+    if (parameterVector.size() >= 1) {
+        parameterVector.pop_back();
+    }
     return parameterVector;
 }
 
@@ -62,11 +66,9 @@ vector<char *> parseParameters(string parameterString, char *token) {
 vector<vector<char *> > checkAdditionalParameters(string parameterString) {
     vector<vector<char *> > parameterVector;
     
-    parameterVector[0] = parseParameters(parameterString, "|"); // piping
-    
-    parameterVector[1] = parseParameters(parameterString, "<"); // input
-    
-    parameterVector[2] = parseParameters(parameterString, ">"); // output
+    parameterVector.push_back(parseParameters(parameterString, "|")); // piping
+    parameterVector.push_back(parseParameters(parameterString, "<")); // input
+    parameterVector.push_back(parseParameters(parameterString, ">")); // output
     
     return parameterVector;
 }
@@ -82,33 +84,41 @@ void executeInvalidCommand(string command) {
 
 
 
-void executePwd() { // to be forked?
+void executePwd(string parameterString) { // to be forked?
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
     printNewLine();
+
+    vector<vector<char *> > parameters = checkAdditionalParameters(parameterString);
     
-    vector<vector<char *> > parameters = parseParameters)();
-    
-    if (parameters[0][0] != null) { //pipe
-        
+    if (!(parameters[0].empty()) && parameters[0][0] != NULL) { //pipe
+        cout << "pipe" << endl;
     }
     
-    if (parameters[2][0] != null) { //redirect output
-        // open a file for output
+    if (!(parameters[2].empty()) && parameters[2][0] != NULL) { //redirect output
+        // open a files for output
+        cout << "in output redirect if" << endl;
+        for (int i=0; i < parameters[2].size(); i++) {
+            cout << "parameter" << parameters[2][i] << "endparam" << endl;
+        }
+        int flags = O_CREAT | S_IRUSR | S_IWUSR; //FIXME // add | O_RDWR
+        //int flags = O_CREAT; //FIXME
+        int outputFD;
         
-        int flags = O_RDONLY | O_RDONLY | O_RDONLY; //FIXME
-        
-        for (int i=0; i < parameters[2].lenth(); i+=) {
+        for (int i=0; i < parameters[2].size(); i++) {
             // create a file for each output vector entry
-            
-            
+            outputFD = open(parameters[2][i], flags); // returns the new file descriptor
+            close(outputFD);
         }
             
-            // write to final output vector entry
-        
-        outputFD = open (parameters[2][0], flags); // returns the new file descriptor
+        // write to final output vector entry
+        flags = S_IRUSR | S_IWUSR | O_RDWR;
+        outputFD = open(parameters[2][(parameters[2].size() - 1)], flags); // returns the new file descriptor
+        write(outputFD, directoryName, strlen(directoryName));
     }
+    
     else {
+        cout << "in else" << endl;
         write(STDOUT_FILENO, directoryName, strlen(directoryName));
         printNewLine();
     }
@@ -175,7 +185,7 @@ void printShellPrompt() {
 }
 
 void directCommand(string command) {
-    string commandType = command.substr (0,2);
+    string commandType = command.substr(0,3); // FIXME
     string parameterString;
     
     if (command.length() > 2) {
@@ -188,8 +198,8 @@ void directCommand(string command) {
     else if (commandType == "ls") {
         cout << "ls" << endl;
     }
-    else if (command == "pwd") {
-        executePwd();
+    else if (commandType == "pwd") {
+        executePwd(parameterString);
     }
     else if (commandType == "ff") {
         cout << "ff" << endl;
