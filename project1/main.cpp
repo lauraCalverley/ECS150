@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #include <string>
+#include <vector>
 #include <cstring>
 #include <iostream>
 
@@ -45,6 +47,31 @@ string executeBackspace(string command) {
     return (command.substr(0,(command.length()-1)));
 }
 
+vector<char *> parseParameters(string parameterString, char *token) {
+    vector<char *> parameterVector;
+    char const * parameterCharArray = parameterString.c_str();
+    strtok((char *)parameterCharArray, token);
+    while (parameterVector.back() != NULL) {
+        parameterVector.push_back(strtok(NULL, token));
+    }
+    parameterVector.pop_back();
+    return parameterVector;
+}
+
+
+vector<vector<char *> > checkAdditionalParameters(string parameterString) {
+    vector<vector<char *> > parameterVector;
+    
+    parameterVector[0] = parseParameters(parameterString, "|"); // piping
+    
+    parameterVector[1] = parseParameters(parameterString, "<"); // input
+    
+    parameterVector[2] = parseParameters(parameterString, ">"); // output
+    
+    return parameterVector;
+}
+
+
 void executeInvalidCommand(string command) {
     printNewLine();
     char *temp = "Failed to execute ";
@@ -53,12 +80,40 @@ void executeInvalidCommand(string command) {
     printNewLine();
 }
 
+
+
 void executePwd() { // to be forked?
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
     printNewLine();
-    write(STDOUT_FILENO, directoryName, strlen(directoryName));
-    printNewLine();
+    
+    vector<vector<char *> > parameters = parseParameters)();
+    
+    if (parameters[0][0] != null) { //pipe
+        
+    }
+    
+    if (parameters[2][0] != null) { //redirect output
+        // open a file for output
+        
+        int flags = O_RDONLY | O_RDONLY | O_RDONLY; //FIXME
+        
+        for (int i=0; i < parameters[2].lenth(); i+=) {
+            // create a file for each output vector entry
+            
+            
+        }
+            
+            // write to final output vector entry
+        
+        outputFD = open (parameters[2][0], flags); // returns the new file descriptor
+    }
+    else {
+        write(STDOUT_FILENO, directoryName, strlen(directoryName));
+        printNewLine();
+    }
+    
+    
 }
 
 void executeCd(string parameterString) {
@@ -88,7 +143,6 @@ void executeCd(string parameterString) {
     }
 
 }
-
 
 void printShellPrompt() {
     char *path = NULL;
@@ -129,7 +183,6 @@ void directCommand(string command) {
     }
     
     if (commandType == "cd") {
-        //cout << "cd" << endl;
         executeCd(parameterString);
     }
     else if (commandType == "ls") {
