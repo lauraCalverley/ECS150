@@ -39,6 +39,12 @@ void printNewLine() {
     write(STDOUT_FILENO, &newLine, 1);
 }
 
+string executeBackspace(string command) {
+    char *temp = "\b \b";
+    write(STDOUT_FILENO, temp, strlen(temp));
+    return (command.substr(0,(command.length()-1)));
+}
+
 void executeInvalidCommand(string command) {
     printNewLine();
     char *temp = "Failed to execute ";
@@ -65,7 +71,6 @@ void executeCd(string parameterString) {
             directoryName = getenv("HOME");
         }
         else {
-        
             directoryName = (parameterString.substr(1, parameterString.length()-1)).c_str();
         }
         
@@ -155,11 +160,11 @@ int main() {
                 printShellPrompt();
                 read(STDIN_FILENO, &nextChar, 1);
                 command = "";
-                while(nextChar != 0x0A){//not enter
+                while(nextChar != 0x0A){//while not enter
                     switch(nextChar) {
                         case 0x08: //backspace
                         case 0x7F: { //delete
-                            cout << "delete/backspace" << endl;
+                            command = executeBackspace(command); // returns command to remove last char from command string
                             break;
                         }
                         case 0x1B: { // escape character
@@ -167,11 +172,8 @@ int main() {
                             break;
                         }
                         default: { // input chars
-                            //cout << "other char" << endl;
                             write(STDOUT_FILENO, &nextChar, 1);
                             command += nextChar;
-                            //cout << command << endl;
-                            
                             break;
                         }
 
