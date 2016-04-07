@@ -281,7 +281,12 @@ string executeArrows(deque<string> history, int &counter) {
             }
             else if (counter > history.size()-1) {
                 write(STDOUT_FILENO, &audible, 1);
-                counter--;
+                if(!history.size()){
+                    counter = 0;
+                }
+                else {
+                    counter--;
+                }
                 command = history[counter];
             }
             else {
