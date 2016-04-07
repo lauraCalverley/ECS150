@@ -287,11 +287,11 @@ string executeArrows(deque<string> history, int &counter) {
                 }
                 else {
                     counter--;
-                    cout << "here\n";
                     command = history[counter];
                 }
             }
             else {
+                cout << "here\n";
                 command = history[counter];
             }
             
