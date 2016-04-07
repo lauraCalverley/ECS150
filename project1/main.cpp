@@ -267,7 +267,6 @@ string executeArrows(deque<string> history, int &counter) {
     char nextChar;
     char audible = 0x07;
     string command;
-    cout << "command at beginning of executeArrows: " << command << endl;
     
     read(STDIN_FILENO, &nextChar, 1);
     if (nextChar == 0x5B) { // [
@@ -342,7 +341,6 @@ int main() {
                         }
                         case 0x1B: { // escape character // FIXME need prompt for history items
                             command = executeArrows(history, counter);
-                            cout << "command: " << command << endl;
                             char *commandCString = (char *)command.c_str();
                             write(STDOUT_FILENO, &commandCString, strlen(commandCString));
                             break;
