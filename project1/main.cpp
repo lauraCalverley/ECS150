@@ -274,10 +274,6 @@ string executeArrows(deque<string> history, int &counter) {
         read(STDIN_FILENO, &nextChar, 1);
         if (nextChar == 0x41) { // up arrow
             counter++;
-            cout << "counter: " << counter << endl;
-            cout << "history.size: " << history.size() << endl;
-            cout << "history.size - 1: " << history.size() - 1 << endl;
-            // cout << "bool counter > history.size - 1: " << counter > (history.size() - 1) << endl;
             if (counter > 9) {
                 write(STDOUT_FILENO, &audible, 1);
                 counter = 9;
@@ -295,12 +291,10 @@ string executeArrows(deque<string> history, int &counter) {
                 // }
             }
             else if (!history.size()){
-                cout << "right place\n";
                 counter = 0;
                 command = "";
             }
             else {
-                cout << "wrong place\n";
                 command = history[counter];
             }
             
