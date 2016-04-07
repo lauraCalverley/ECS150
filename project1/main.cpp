@@ -42,7 +42,7 @@ void printNewLine() {
     write(STDOUT_FILENO, &newLine, 1);
 }
 
-string executeBackspace(string command) { //FIXME: don't allow prompt to be erased...audible bell
+string executeBackspace(string command) {
     if (command != "") {
         char *temp = "\b \b";
         write(STDOUT_FILENO, temp, strlen(temp));
@@ -263,10 +263,9 @@ void directCommand(string command) {
     }
 }
 
-string executeArrows(deque<string> history, int &counter) {
+void executeArrows(deque<string> history, string &command, int &counter) {
     char nextChar;
     char audible = 0x07;
-    string command;
     
     read(STDIN_FILENO, &nextChar, 1);
     if (nextChar == 0x5B) { // [
@@ -274,51 +273,59 @@ string executeArrows(deque<string> history, int &counter) {
         read(STDIN_FILENO, &nextChar, 1);
         if (nextChar == 0x41) { // up arrow
             counter++;
-            if (counter > 9) {
+            if (counter > 9) { // = 10 case
                 write(STDOUT_FILENO, &audible, 1);
                 counter = 9;
                 command = history[9];
             }
-            else if (counter > (history.size()-1)) {
+            else if (counter >= history.size()) {
                 write(STDOUT_FILENO, &audible, 1);
-                // if(!history.size()){
-                //     counter = 0;
-                //     command = "";
-                // }
-                // else {
-                    counter--;
-                    command = history[counter];
-                // }
+                counter--;
             }
-            else if (!history.size()){
-                counter = 0;
-                command = "";
+            else if (!history.size()){ //no history
+                write(STDOUT_FILENO, &audible, 1);
+                counter = -1;
             }
             else {
+                // erase current user input
+                int previousCommandLength = command.length();
+                for (int i=0; i < previousCommandLength; i++) {
+                    char *temp = "\b \b";
+                    write(STDOUT_FILENO, temp, strlen(temp));
+                }
+                
+                // write requested historical command
                 command = history[counter];
+                char *commandCString = (char *)command.c_str();
+                write(STDOUT_FILENO, commandCString, strlen(commandCString));
             }
-            
         }
         else if (nextChar == 0x42) { // down arrow
             counter--;
-            if (counter == -1) {
+            if (counter == -2) { //FIXME: case where the user types, then hits UP, then hits DOWN (enter is never pressed)
                 write(STDOUT_FILENO, &audible, 1);
-                counter = 0;
-                if(!history.size()){
-                    command = "";
-                }
-                else{
-                    command = history[0];
-                }
+                counter = -1;
             }
             else {
-                command = history[counter];
+                // erase current user input
+                int previousCommandLength = command.length();
+                for (int i=0; i < previousCommandLength; i++) {
+                    char *temp = "\b \b";
+                    write(STDOUT_FILENO, temp, strlen(temp));
+                }
+                if (counter == -1) {
+                    command = "";
+                }
+                else {
+                    // write requested historical command
+                    command = history[counter];
+                    char *commandCString = (char *)command.c_str();
+                    write(STDOUT_FILENO, commandCString, strlen(commandCString));
+                }
             }
             
         }
     }
-    
-    return command;
 }
 
 int main() {
@@ -328,7 +335,7 @@ int main() {
 	char nextChar;
     string command;
 
-    int counter = 0; // tracks how far back in history user is
+    int counter = -1; // tracks how far back in history user is // -1 represents current prompt
     deque<string> history; //used to keep history of up to 10 previous commands // front is recent, back is old
     
 	while(command != "exit"){ //breaks on exit if statement
@@ -344,9 +351,7 @@ int main() {
                             break;
                         }
                         case 0x1B: { // escape character // FIXME need prompt for history items
-                            command = executeArrows(history, counter);
-                            char *commandCString = (char *)command.c_str();
-                            write(STDOUT_FILENO, &commandCString, strlen(commandCString));
+                            executeArrows(history, command, counter);
                             break;
                         }
                         default: { // input chars
@@ -364,7 +369,7 @@ int main() {
         if (history.size() > 10) {
             history.pop_back();
         }
-        counter = 0;
+        counter = -1;
 	}
     
     for (int i=0; i < history.size(); i++) {
@@ -378,8 +383,6 @@ int main() {
 
 
 /* TO DO
- up and down arrows are causing seg faults
- need prompt for history items
  fix |<> tokenizing parameters
  execute other apps like grep, cat, etc. (execvp???) / get piping working
  get input redirection working - try hard coding a fake file name!
