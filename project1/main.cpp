@@ -277,7 +277,7 @@ string executeArrows(deque<string> history, int &counter) {
             cout << "counter: " << counter << endl;
             cout << "history.size: " << history.size() << endl;
             cout << "history.size - 1: " << history.size() - 1 << endl;
-            cout << "bool counter > history.size - 1: " << counter > history.size() - 1 << endl;
+            cout << "bool counter > history.size - 1: " << counter > (history.size() - 1) << endl;
             if (counter > 9) {
                 write(STDOUT_FILENO, &audible, 1);
                 counter = 9;
