@@ -267,6 +267,7 @@ string executeArrows(deque<string> history, int &counter) {
     char nextChar;
     char audible = 0x07;
     string command;
+    cout << "command at beginning of executeArrows: " << command << endl;
     
     read(STDIN_FILENO, &nextChar, 1);
     if (nextChar == 0x5B) { // [
