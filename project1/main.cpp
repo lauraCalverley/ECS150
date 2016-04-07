@@ -55,15 +55,37 @@ string executeBackspace(string command) {
     return command;
 }
 
-vector<char *> parseParameters(string parameterString, char *token) {
+vector<char *> parseParameters(string parameterString, char *token) { // assumes a non-empty parameter string
     vector<char *> parameterVector;
+
     char const *parameterCharArray = parameterString.c_str();
-    strtok((char *)parameterCharArray, token);
+    char *mytok = strtok((char *)parameterCharArray, token);
+    cout << "mytok (before while): " << mytok << endl;
     
-    while (parameterVector.empty() || parameterVector.back() != NULL) {
-        parameterVector.push_back(strtok(NULL, token));
+    if (mytok) {
+        parameterVector.push_back(mytok);
     }
     
+    while (mytok = strtok(NULL, token)
+           parameterVector.empty() || parameterVector.back() != NULL) {
+        cout << "in while" << endl;
+        char *mytok = strtok(NULL, token);
+        cout << "mytok: " << mytok << endl;
+        parameterVector.push_back(mytok);
+    
+    }
+
+/* 
+ while (parameterVector.empty() || parameterVector.back() != NULL) {
+ cout << "in while" << endl;
+ char *mytok = strtok(NULL, token);
+ cout << "mytok: " << mytok << endl;
+ parameterVector.push_back(mytok);
+ 
+ }
+*/
+ 
+ 
     //cout << "back: " << parameterVector[(parameterVector.size() - 1)] << endl;
     
     if (parameterVector.size() >= 1) { //&& (parameterVector.back() == NULL)) {
@@ -78,12 +100,24 @@ vector<char *> parseParameters(string parameterString, char *token) {
 }
 
 
-vector<vector<char *> > checkAdditionalParameters(string parameterString) {
-    vector<vector<char *> > parameterVector;
+vector<vector<char *> > checkAdditionalParameters(string parameterString) { // change it to parse all parameters here, no separate calls
     
-    parameterVector.push_back(parseParameters(parameterString, "| ")); // piping
-    parameterVector.push_back(parseParameters(parameterString, "< ")); // input
-    parameterVector.push_back(parseParameters(parameterString, "> ")); // output
+    // delimit on pipes and spaces and push to parameterVector[0]
+    
+    
+    vector<vector<char *> > parameterVector;
+    vector<char *> dummy;
+    
+    if (!parameterString.empty()) {
+        parameterVector.push_back(parseParameters(parameterString, "| ")); // piping
+        parameterVector.push_back(parseParameters(parameterString, "< ")); // input
+        parameterVector.push_back(parseParameters(parameterString, "> ")); // output
+    }
+    else {
+        parameterVector.push_back(dummy); // piping
+        parameterVector.push_back(dummy); // input
+        parameterVector.push_back(dummy); // output
+    }
     
     //parameterVector.push_back(parseParameters(parameterString, "|<> "));
     return parameterVector;
@@ -242,6 +276,9 @@ void directCommand(string command) {
     if (command.length() > commandLength) {
         parameterString = command.substr (commandLength, (command.length() - commandLength));
     }
+    else {
+        parameterString = "";
+    }
     
     if (commandType == "cd") {
         executeCd(parameterString);
@@ -328,7 +365,7 @@ void executeArrows(deque<string> history, string &command, int &counter) {
     }
 }
 
-int main() {
+/*int main() {
 	struct termios SavedTermAttributes;
 	SetNonCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
 
@@ -379,6 +416,23 @@ int main() {
 	ResetCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
     
         return 1;
+} */
+
+int main() {
+    string mystring;
+    vector<vector<char *> > parameters;
+    cin >> mystring;
+    //mystring = "";
+    parameters = checkAdditionalParameters(mystring);
+    
+    
+    for (int i=0; i < parameters.size(); i++) {
+        for (int j=0; j < parameters[i].size(); j++) {
+            cout << "parameters[" << i << "][" << j << "] is " << parameters[i][j] << endl;
+        }
+        cout << endl;
+    }
+    
 }
 
 
