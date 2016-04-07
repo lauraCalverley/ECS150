@@ -284,16 +284,20 @@ string executeArrows(deque<string> history, int &counter) {
                 command = history[9];
             }
             else if (counter > (history.size()-1)) {
-                cout << "right place\n";
                 write(STDOUT_FILENO, &audible, 1);
-                if(!history.size()){
-                    counter = 0;
-                    command = "";
-                }
-                else {
+                // if(!history.size()){
+                //     counter = 0;
+                //     command = "";
+                // }
+                // else {
                     counter--;
                     command = history[counter];
-                }
+                // }
+            }
+            else if (!history.size()){
+                cout << "right place\n";
+                counter = 0;
+                command = "";
             }
             else {
                 cout << "wrong place\n";
