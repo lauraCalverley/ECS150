@@ -287,7 +287,7 @@ string executeArrows(deque<string> history, int &counter) {
                 }
                 else {
                     counter--;
-                    __LINE__;
+                    cout << "here\n";
                     command = history[counter];
                 }
             }
