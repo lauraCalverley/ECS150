@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 #include <cstring>
 #include <iostream>
 
@@ -212,12 +213,54 @@ void directCommand(string command) {
     }
 }
 
+string executeArrows(deque<string> history, int &counter) {
+    char nextChar;
+    char audible = 0x07;
+    string command;
+    
+    read(STDIN_FILENO, &nextChar, 1);
+    if (nextChar == 0x5B) { // [
+    
+        read(STDIN_FILENO, &nextChar, 1);
+        if (nextChar == 0x41) { // up arrow
+            counter++;
+            if (counter > 9) {
+                write(STDOUT_FILENO, &audible, 1);
+                counter = 9;
+                command = history[9];
+            }
+            else {
+                command = history[counter];
+            }
+            
+        }
+        else if (nextChar == 0x42) { // down arrow
+            counter--;
+            if (counter == -1) {
+                write(STDOUT_FILENO, &audible, 1);
+                counter = 0;
+                command = history[0];
+            }
+            else {
+                command = history[counter];
+            }
+            
+        }
+    }
+    
+    return command;
+}
+
 int main() {
 	struct termios SavedTermAttributes;
 	SetNonCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
 
 	char nextChar;
     string command;
+
+    int counter = 0; // tracks how far back in history user is
+    deque<string> history; //used to keep history of up to 10 previous commands // front is recent, back is old
+    
 	while(command != "exit"){ //breaks on exit if statement
                 // print shell prompt
                 printShellPrompt();
@@ -231,7 +274,10 @@ int main() {
                             break;
                         }
                         case 0x1B: { // escape character
-                            cout << "arrow" << endl;
+                            command = executeArrows(history, counter);
+                            cout << "command: " << command << endl;
+                            char *commandCString = (char *)command.c_str();
+                            write(STDOUT_FILENO, &commandCString, strlen(commandCString));
                             break;
                         }
                         default: { // input chars
@@ -245,9 +291,19 @@ int main() {
 
                 }
         directCommand(command);
+        history.push_front(command);
+        if (history.size() > 10) {
+            history.pop_back();
+        }
+        counter = 0;
 	}
-
+    
+    for (int i=0; i < history.size(); i++) {
+        cout << history[i] << endl;
+    }
+    
 	ResetCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
+    
         return 1;
 }
 
