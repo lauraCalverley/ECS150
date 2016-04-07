@@ -42,24 +42,38 @@ void printNewLine() {
     write(STDOUT_FILENO, &newLine, 1);
 }
 
-string executeBackspace(string command) {
-    char *temp = "\b \b";
-    write(STDOUT_FILENO, temp, strlen(temp));
-    return (command.substr(0,(command.length()-1)));
+string executeBackspace(string command) { //FIXME: don't allow prompt to be erased...audible bell
+    if (command != "") {
+        char *temp = "\b \b";
+        write(STDOUT_FILENO, temp, strlen(temp));
+        command = command.substr(0,(command.length()-1));
+    }
+    else {
+        char audible = 0x07;
+        write(STDOUT_FILENO, &audible, 1);
+    }
+    return command;
 }
 
 vector<char *> parseParameters(string parameterString, char *token) {
     vector<char *> parameterVector;
-    char const * parameterCharArray = parameterString.c_str();
-    char *tokenFound = strtok((char *)parameterCharArray, token);
+    char const *parameterCharArray = parameterString.c_str();
+    strtok((char *)parameterCharArray, token);
     
     while (parameterVector.empty() || parameterVector.back() != NULL) {
         parameterVector.push_back(strtok(NULL, token));
     }
     
-    if (parameterVector.size() >= 1) {
+    //cout << "back: " << parameterVector[(parameterVector.size() - 1)] << endl;
+    
+    if (parameterVector.size() >= 1) { //&& (parameterVector.back() == NULL)) {
         parameterVector.pop_back();
     }
+    
+    for (int i=0; i < parameterVector.size(); i++) {
+        cout << "parameterVector " << i << "for " << token << parameterVector[i] << endl;
+    }
+    
     return parameterVector;
 }
 
@@ -67,10 +81,11 @@ vector<char *> parseParameters(string parameterString, char *token) {
 vector<vector<char *> > checkAdditionalParameters(string parameterString) {
     vector<vector<char *> > parameterVector;
     
-    parameterVector.push_back(parseParameters(parameterString, "|")); // piping
-    parameterVector.push_back(parseParameters(parameterString, "<")); // input
-    parameterVector.push_back(parseParameters(parameterString, ">")); // output
+    parameterVector.push_back(parseParameters(parameterString, "| ")); // piping
+    parameterVector.push_back(parseParameters(parameterString, "< ")); // input
+    parameterVector.push_back(parseParameters(parameterString, "> ")); // output
     
+    //parameterVector.push_back(parseParameters(parameterString, "|<> "));
     return parameterVector;
 }
 
@@ -86,6 +101,7 @@ void executeInvalidCommand(string command) {
 
 
 void executePwd(string parameterString) { // to be forked?
+    
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
     printNewLine();
@@ -94,13 +110,41 @@ void executePwd(string parameterString) { // to be forked?
     
     if (!(parameters[0].empty()) && parameters[0][0] != NULL) { //pipe
         cout << "pipe" << endl;
+        for (int i=0; i < parameters[0].size(); i++) {
+            cout << "parameters[pipe]: " << parameters[0][i] << "end pipe param" << endl;
+        }
+    }
+    if (parameters[0].size() == 0) {
+        cout << "empty" << endl;
+    }
+    
+    for (int i=0; i < parameters[0].size(); i++) {
+        cout << "parameters[|]: " << parameters[0][i] << "end | param" << endl;
+    }
+
+    
+    
+    if (parameters[1].size() == 0) {
+        cout << "empty" << endl;
+    }
+    
+    for (int i=0; i < parameters[1].size(); i++) {
+        cout << "parameters[<]: " << parameters[1][i] << "end < param" << endl;
+    }
+    
+    
+    if (parameters[2].size() == 0) {
+        cout << "empty" << endl;
+    }
+
+    for (int i=0; i < parameters[2].size(); i++) {
+        cout << "parameters[>]: " << parameters[2][i] << "end > param" << endl;
     }
     
     if (!(parameters[2].empty()) && parameters[2][0] != NULL) { //redirect output
+        cout << "in the if" << endl;
         // open a files for output
-        cout << "in output redirect if" << endl;
         for (int i=0; i < parameters[2].size(); i++) {
-            cout << "parameter" << parameters[2][i] << "endparam" << endl;
         }
         int flags = O_CREAT | S_IRUSR | S_IWUSR; //FIXME // add | O_RDWR
         //int flags = O_CREAT; //FIXME
@@ -119,7 +163,6 @@ void executePwd(string parameterString) { // to be forked?
     }
     
     else {
-        cout << "in else" << endl;
         write(STDOUT_FILENO, directoryName, strlen(directoryName));
         printNewLine();
     }
@@ -186,11 +229,18 @@ void printShellPrompt() {
 }
 
 void directCommand(string command) {
-    string commandType = command.substr(0,3); // FIXME
+    
+    char const *commandC = command.c_str();
+    string commandType = strtok((char *)commandC, " ");
+    
+    //cout << "commandType: " << commandType << endl;
+    
+    //string commandType = command.substr(0,3); // FIXME
     string parameterString;
     
-    if (command.length() > 2) {
-        parameterString = command.substr (2, (command.length() - 2));
+    int commandLength = commandType.length();
+    if (command.length() > commandLength) {
+        parameterString = command.substr (commandLength, (command.length() - commandLength));
     }
     
     if (commandType == "cd") {
@@ -228,6 +278,11 @@ string executeArrows(deque<string> history, int &counter) {
                 write(STDOUT_FILENO, &audible, 1);
                 counter = 9;
                 command = history[9];
+            }
+            else if (counter > history.size()-1) {
+                write(STDOUT_FILENO, &audible, 1);
+                counter--;
+                command = history[counter];
             }
             else {
                 command = history[counter];
@@ -273,7 +328,7 @@ int main() {
                             command = executeBackspace(command); // returns command to remove last char from command string
                             break;
                         }
-                        case 0x1B: { // escape character
+                        case 0x1B: { // escape character // FIXME need prompt for history items
                             command = executeArrows(history, counter);
                             cout << "command: " << command << endl;
                             char *commandCString = (char *)command.c_str();
@@ -308,6 +363,19 @@ int main() {
 }
 
 
+/* TO DO
+ up and down arrows are causing seg faults
+ need prompt for history items
+ fix |<> tokenizing parameters
+ execute other apps like grep, cat, etc. (execvp???) / get piping working
+ get input redirection working - try hard coding a fake file name!
+ get output redirection working
+ add forking to pwd
+ ls
+ ff
+ complete the README
+ write the makefile
+*/
 
 
 //References:
