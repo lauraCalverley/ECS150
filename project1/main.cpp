@@ -275,6 +275,7 @@ string executeArrows(deque<string> history, int &counter) {
         if (nextChar == 0x41) { // up arrow
             counter++;
             cout << "counter: " << counter << endl;
+            cout << "history.size: " << history.size() << endl;
             if (counter > 9) {
                 write(STDOUT_FILENO, &audible, 1);
                 counter = 9;
