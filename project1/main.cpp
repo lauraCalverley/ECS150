@@ -214,31 +214,31 @@ void getPerms(string &perms, struct dirent* dp, struct stat statbuf){
     stat(dp->d_name, &statbuf);
     if(S_IRUSR & statbuf.st_mode){
         perms += 'r';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IWUSR & statbuf.st_mode){
         perms += 'w';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IXUSR & statbuf.st_mode){
         perms += 'x';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IRGRP & statbuf.st_mode){
         perms += 'r';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IWGRP & statbuf.st_mode){
         perms += 'w';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IXGRP & statbuf.st_mode){
         perms += 'x';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IROTH & statbuf.st_mode){
         perms += 'r';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IWOTH & statbuf.st_mode){
         perms += 'w';
-    } else {perms += ' ';}
+    } else {perms += '-';}
     if(S_IXOTH & statbuf.st_mode){
         perms += 'x';
-    } else {perms += ' ';}
+    } else {perms += '-';}
 }
 
 
