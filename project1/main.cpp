@@ -281,54 +281,93 @@ vector<vector<char *> > parseCommand(string command) {
     }
     
     cout << "working to here when hardcoded" << endl;
-    
-    
     int i = 0;
     char *currentToken;
     while (i != tokens.size()) {
+        cout << __LINE__ << endl;
         currentToken = tokens[i];
         if (i == 0) {
-            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+            cout << __LINE__ << endl;
+            //while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < tokens.size())) {
+
+            while (
+                   strcmp(currentToken, "|") &&
+                   strcmp(currentToken, "<") &&
+                   strcmp(currentToken, ">") &&
+                   (i < tokens.size())
+                   ) {
+
+            //while ((i < tokens.size()) && !((currentToken == "|") || (currentToken == "<") || (currentToken == ">"))) {
+                cout << __LINE__ << endl;
+                cout << "current token: " << currentToken << endl;
+                
+                if (currentToken == "|") {
+                    cout << "it's a pipe " << currentToken << endl;
+                }
+                
+                
                 commandVector.push_back(currentToken);
                 i++;
+                currentToken = tokens[i];
             }
+            cout << __LINE__ << endl;
         }
-        else if (currentToken == "|") {
+        else if (!strcmp(currentToken, "|")) {
+            cout << __LINE__ << endl;
             i++;
-            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+            currentToken = tokens[i];
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < tokens.size())) {
                 temp = temp + currentToken + " ";
                 i++;
+                currentToken = tokens[i];
             }
             temp.pop_back();
             pipeVector.push_back((char*)temp.c_str());
         }
-        else if (currentToken == "<") {
+        else if (!strcmp(currentToken, "<")) {
+            cout << __LINE__ << endl;
             i++;
-            if ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+            currentToken = tokens[i];
+            if ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < tokens.size())) {
                 inputVector.push_back(currentToken);
             }
             else {
                 // error // FIXME
             }
             
-            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < tokens.size())) {
                 i++;
+                currentToken = tokens[i];
             }
         }
-        else if (currentToken == ">") {
+        else if (!strcmp(currentToken, ">") {
+            cout << __LINE__ << endl;
             i++;
-            if ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+            currentToken = tokens[i];
+            if ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < tokens.size())) {
                 outputVector.push_back(currentToken);
             }
             else {
                 // error // FIXME
             }
             
-            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < tokens.size())) {
                 i++;
+                currentToken = tokens[i];
             }
         }
+        else {
+            cout << "IN THE ELSE...UH OH" << endl;
+        }
     }
+    
+    cout << "out of while\n";
+    
+    
+    for (int i=0; i < commandVector.size(); i++) {
+        cout << "commandVector[" << i << "] is " << commandVector[i] << endl;
+    }
+    
     
     parsedParameters.push_back(commandVector);
     parsedParameters.push_back(pipeVector);
