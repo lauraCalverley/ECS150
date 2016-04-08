@@ -229,7 +229,7 @@ void getPerms(string &perms, struct dirent* dp, struct stat statbuf){
     } else {perms += ' ';}
     if(S_IXGRP & statbuf.st_mode){
         perms += 'x';
-    } else {perms += ' '};
+    } else {perms += ' ';}
     if(S_IROTH & statbuf.st_mode){
         perms += 'r';
     } else {perms += ' ';}
@@ -250,7 +250,7 @@ void executeLs(vector<vector<char*> > parsedInput){
     struct dirent *dp; 
     struct stat statbuf;
     string makePerms = "";
-    char* perms; //permissions
+    const char* perms; //permissions
 
     if(parsedInput[0].size() == 1){ //no parameters
         dir = opendir("."); //open the current directory
