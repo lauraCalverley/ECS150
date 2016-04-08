@@ -228,7 +228,7 @@ void executeLs(vector<vector<char*> > parsedInput){
         while((dp = readdir(dir)) != NULL){ //loop through directory
             stat(dp->d_name, &statbuf); //get stat
             //userread = (S_IRUSR && statbuf.st_mode)
-            cout << "user read: " << (S_IRUSR & statbuf.st_mode) << endl; //list permissions
+            cout << "user exec: " << (S_IXUSR & statbuf.st_mode) << endl; //list permissions
             write(STDOUT_FILENO, perms, strlen(perms)); //not working
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
