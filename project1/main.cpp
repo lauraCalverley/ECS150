@@ -590,3 +590,11 @@ int main() {
 
 //LAURA Did
 //  created parsePipeCommand function which parses 1 pipe command
+//  worked on pipe and fork
+//  currently outputing broken pipe and I don't know why
+
+
+//Potentially helpful piazza
+ // @142
+ // @201 We need to use dup2 for in and out redirects
+ // @208 We need to have 1 child for each command (including pwd, ls, etc..)
