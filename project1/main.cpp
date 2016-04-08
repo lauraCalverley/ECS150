@@ -68,7 +68,7 @@ void executeInvalidCommand(string command) {
 
 
 char** parsePipeCommand(char * command){
-    char* tokens[];
+    char** tokens;
     char *token;
     token = strtok(command, " ");
     
