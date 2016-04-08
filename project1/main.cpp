@@ -133,15 +133,20 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         args[i] = NULL;
         //end of parsePipeCommand()
 
+        cout << __LINE__ << endl;
+
         
         // create pipe
         if (pipe(fd) == -1) {
             cout << "ERROR" << endl;
         }
         
+        cout << __LINE__ << endl;
+
         // fork a child process
         pid = fork();
         
+        cout << __LINE__ << endl;
         
         // read = 0
         // write = 1
