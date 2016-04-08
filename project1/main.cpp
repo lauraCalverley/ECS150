@@ -67,7 +67,17 @@ void executeInvalidCommand(string command) {
 
 
 
-
+void parsePipeCommand(char * command){
+    vector<char *> tokens;
+    char *token;
+    token = strtok(commandC, " ");
+    
+    while (token != NULL) {
+        tokens.push_back(token);
+        token = strtok(NULL, " ");
+    }
+    return tokens;
+}
 
 
 
@@ -89,7 +99,10 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         // cite the textbook
         int fd[2]; // CITE p. 143 of the textbook
         pid_t pid;
+        int childStatus;
         char read_msg[strlen(directoryName)];
+
+        char * args = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
         
         // create pipe
         if (pipe(fd) == -1) {
@@ -102,22 +115,25 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         
         // read = 0
         // write = 1
-        
+        //CITE http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
         if (pid <0) {
             cout << "ERROR" << endl;
         }
         
-        if (pid > 0) { // parent process AKA ashell
-            close(fd[0]);
-            write(fd[1], directoryName, strlen(directoryName));
+        if (pid == 0) { // child process like grep, cat, etc. AKA ashell
+            dup2(fd[0], 0);
             close(fd[1]);
+            //read(fd[0], read_msg, strlen(directoryName));
+            
+            execvp(args[0], args);
+            //close(fd[0]);
+
         }
         
-        else { // child process like grep, cat, etc.
-            close(fd[1]);
-            read(fd[0], read_msg, strlen(directoryName));
-            
-            //int execvp(const char *file, char *const argv[]);
+        else { // parent process  AKA ashell
+            //CITE http://www.cs.ecu.edu/karl/4630/sum01/example1.html
+            wait(&childStatus); //change to waitpid if waiting for one specific child from multiple children
+            dup2(fd[1], 1);
             close(fd[0]);
         }
         //printNewLine(); // is this right??
@@ -527,4 +543,9 @@ int main() {
 // http://www.ascii-code.com/
 // http://www.cplusplus.com/forum/beginner/16987/
 // cat temp.c > test2.txt
+// http://www.cs.ecu.edu/karl/4630/sum01/example1.html
+// http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
+
+
+ //LAURA Did
 
