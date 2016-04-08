@@ -13,7 +13,7 @@
 #include <grp.h>
 #include <time.h>
 #include <locale.h>
-#include <langinfor.h>
+#include <langinfo.h>
 
 #include <string>
 #include <vector>
