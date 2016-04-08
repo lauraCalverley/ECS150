@@ -73,7 +73,7 @@ char* const* parsePipeCommand(char * command){
     token = strtok(command, " ");
     
     while (token != NULL) {
-        tokens.push(token);
+        tokens.push_back(token);
         token = strtok(NULL, " ");
     }
     return tokens;
