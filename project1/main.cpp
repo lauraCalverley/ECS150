@@ -135,20 +135,14 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         args[i] = NULL;
         //end of parsePipeCommand()
 
-        cout << __LINE__ << endl;
-
         
         // create pipe
         if (pipe(fd) == -1) {
             cout << "ERROR" << endl;
         }
-        
-        cout << __LINE__ << endl;
 
         // fork a child process
         pid = fork();
-        
-        cout << __LINE__ << endl;
 
         // read = 0
         // write = 1
@@ -158,6 +152,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         }
         
         if (pid == 0) { // child process like grep, cat, etc. AKA ashell
+            cout << __LINE__ << endl;
             dup2(fd[0], 0);
             close(fd[1]);
             //read(fd[0], read_msg, strlen(directoryName));
@@ -168,6 +163,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         }
         
         else { // parent process  AKA ashell
+            cout << __LINE__ << endl;
             //CITE http://www.cs.ecu.edu/karl/4630/sum01/example1.html
             wait(&childStatus); //change to waitpid if waiting for one specific child from multiple children
             dup2(fd[1], 1);
