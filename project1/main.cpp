@@ -70,7 +70,7 @@ void executeInvalidCommand(string command) {
 void parsePipeCommand(char * command){
     vector<char *> tokens;
     char *token;
-    token = strtok(commandC, " ");
+    token = strtok(command, " ");
     
     while (token != NULL) {
         tokens.push_back(token);
