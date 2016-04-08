@@ -122,7 +122,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         char commandA[strlen(command)];
         strcpy(commandA, command);
 
-        char* args[strlen(command)];
+        char* args[strlen(command) + 1];
         char *token;
 
         token = strtok(commandA, " ");
