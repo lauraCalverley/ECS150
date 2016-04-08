@@ -67,13 +67,13 @@ void executeInvalidCommand(string command) {
 
 
 
-vector<char*> parsePipeCommand(char * command){
-    vector<char *> tokens;
+char* const* parsePipeCommand(char * command){
+    char* const* tokens;
     char *token;
     token = strtok(command, " ");
     
     while (token != NULL) {
-        tokens.push_back(token);
+        tokens.push(token);
         token = strtok(NULL, " ");
     }
     return tokens;
