@@ -384,6 +384,10 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
     if (outputVector.empty()){
         outputVector.push_back("");
     }*/
+
+    for (int i = 0; i < pipeVector.size(); i++){
+        cout << "pipeVector[" << i << "]: " << pipeVector[i] << endl;
+    }
     
     parameters.push_back(commandVector);
     parameters.push_back(pipeVector);
