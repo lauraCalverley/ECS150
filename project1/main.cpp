@@ -156,16 +156,17 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
             dup2(fd[0], 0);
             close(fd[1]);
             //read(fd[0], read_msg, strlen(directoryName));
-            
+            cout << __LINE__ << endl;
             execvp(args[0], args);
+            cout << __LINE__ << endl;
             //close(fd[0]);
 
         }
         
         else { // parent process  AKA ashell
-            cout << __LINE__ << endl;
             //CITE http://www.cs.ecu.edu/karl/4630/sum01/example1.html
             wait(&childStatus); //change to waitpid if waiting for one specific child from multiple children
+            cout << __LINE__ << endl;
             dup2(fd[1], 1);
             close(fd[0]);
         }
