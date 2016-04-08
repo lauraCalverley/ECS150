@@ -257,7 +257,7 @@ void executeLs(vector<vector<char*> > parsedInput){
         while((dp = readdir(dir)) != NULL){ //loop through directory
             // stat(dp->d_name, &statbuf); //get stat
             // cout << "permissions: " << statbuf.st_mode << endl;
-             cout << "is directory: " << (S_ISDIR & statbuf.st_mode) << endl; //list permissions
+             cout << "is directory: " << (S_ISDIR(statbuf.st_mode)) << endl; //list permissions
             getPerms(makePerms, dp, statbuf);
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms)); 
