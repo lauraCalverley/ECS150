@@ -318,9 +318,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
                 }
             }
             //temp.pop_back(); //c++11 doesn't compile on CSIF
-            temp.erase(temp.end() - 2);
+            temp.erase(temp.end() - 1);
 
-            char* c = new char[temp.length() + 2]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+            char* c = new char[temp.length() + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
             strcpy(c, (char*) temp.c_str());
             pipeVector.push_back(c);
         }
