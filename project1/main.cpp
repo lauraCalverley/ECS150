@@ -123,6 +123,9 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         char* args[strlen(command)];
         char *token;
 
+        cout << __LINE__ << endl;
+
+
         token = strtok(commandA, " ");
         int i = 0;
         while (token != NULL) {
@@ -147,7 +150,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         pid = fork();
         
         cout << __LINE__ << endl;
-        
+
         // read = 0
         // write = 1
         //CITE http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
