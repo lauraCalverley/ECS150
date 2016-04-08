@@ -213,7 +213,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
 
 
 
-void executeLs(vector<vector<char*> > parsedInput){
+/*void executeLs(vector<vector<char*> > parsedInput){
     printNewLine();
 
     // CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/stat.html
@@ -242,7 +242,7 @@ void executeLs(vector<vector<char*> > parsedInput){
         }
 
     }
-}
+}*/
 
 
 
@@ -424,9 +424,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
         outputVector.push_back("");
     }*/
 
-    for (int i = 0; i < pipeVector.size(); i++){
+    /*for (int i = 0; i < pipeVector.size(); i++){
         cout << "pipeVector[" << i << "]: " << pipeVector[i] << endl;
-    }
+    }*/
     
     parameters.push_back(commandVector);
     parameters.push_back(pipeVector);
@@ -437,6 +437,34 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
 
 
 void directCommand(string command) {
+    
+    vector<vector<char *> > parsedInput;
+    
+    parseCommand(command, parsedInput);
+    // 0 = command and it's direct params
+    // 1 is piping
+    // 2 is input redirect
+    // 3 is output redirect
+    
+    string commandType = parsedInput[0][0];
+    
+    bool externalCommand = 1;
+    if ( (commandType == "cd") || (commandType == "ls") || (commandType == "pwd") || (commandType == "ff") || (commandType == "exit")) {
+        externalCommand = 0;
+    }
+    
+    int num_children = externalCommand + parsedInput[1].size() + parsedInput[2].size() + parsedInput[3].size();
+    cout << num_children << endl;
+    
+    
+
+
+}
+
+
+
+/*
+ void directCommand(string command) {
     
     vector<vector<char *> > parsedInput;
     parseCommand(command, parsedInput);
@@ -464,6 +492,7 @@ void directCommand(string command) {
         executeInvalidCommand(command);
     }
 }
+ */
 
 void executeArrows(deque<string> history, string &command, int &counter) {
     char nextChar;
