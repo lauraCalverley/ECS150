@@ -219,7 +219,8 @@ void executeLs(vector<vector<char*> > parsedInput){
     if(parsedInput[0].size() == 1){ //no parameters
         dir = opendir("."); //open the current directory
         while((dp = readdir(dir)) != NULL){ //loop through directory
-            perms = stat(dp->d_name, &statbuf);
+            stat(dp->d_name, &statbuf);
+            perms = sperm(statbuf.st_mode);
             write(STDOUT_FILENO, perms, strlen(perms));
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
