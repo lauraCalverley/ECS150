@@ -426,7 +426,7 @@ void directCommand(string command) {
     }
     else if (commandType == "ls") {
         //cout << "ls" << endl;
-        executeLs(parsedInput)
+        executeLs(parsedInput);
     }
     else if (commandType == "pwd") {
         executePwd(parsedInput);
