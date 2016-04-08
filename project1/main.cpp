@@ -9,6 +9,12 @@
 #include <sys/wait.h>
 #include <dirent.h>
 
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
+#include <locale.h>
+#include <langinfor.h>
+
 #include <string>
 #include <vector>
 #include <deque>
