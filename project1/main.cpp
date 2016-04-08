@@ -216,7 +216,7 @@ void executeLs(vector<vector<char*> > parsedInput){
     if(parsedInput[0].size() == 1){
         dir = opendir(".");
         while((dp = readdir(dir)) != NULL){
-            write(STDOUT_FILENO, dp, strlen(dp));
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
             printNewLine();
         }
     }
@@ -426,7 +426,7 @@ void directCommand(string command) {
     }
     else if (commandType == "ls") {
         //cout << "ls" << endl;
-        executeLs(parsedInput;)
+        executeLs(parsedInput)
     }
     else if (commandType == "pwd") {
         executePwd(parsedInput);
