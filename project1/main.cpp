@@ -213,12 +213,22 @@ void executeLs(vector<vector<char*> > parsedInput){
     DIR * dir;
     struct dirent *dp;
 
-    if(parsedInput[0].size() == 1){
+    if(parsedInput[0].size() == 1){ //no parameters
         dir = opendir(".");
         while((dp = readdir(dir)) != NULL){
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
             printNewLine();
         }
+    }
+    else { // 1 parameter case
+        dir opendir(parsedInput[0][1]);
+        // while(((dp = readdir(dir)) != NULL) || dp->d_name != parsedInput[0][1]){ //loop through current directory to find parameter
+        // }
+        while((dp = readdir(dir)) != NULL){
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
+            printNewLine();
+        }
+
     }
 }
 
