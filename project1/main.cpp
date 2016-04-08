@@ -221,12 +221,14 @@ void executeLs(vector<vector<char*> > parsedInput){
     struct dirent *dp; 
     struct stat statbuf;
     char* perms; //permissions
+    //bool userread;
 
     if(parsedInput[0].size() == 1){ //no parameters
         dir = opendir("."); //open the current directory
         while((dp = readdir(dir)) != NULL){ //loop through directory
             stat(dp->d_name, &statbuf); //get stat
-            cout << "user read: " << (S_IRUSR && statbuf.st_mode) << endl; //list permissions
+            //userread = (S_IRUSR && statbuf.st_mode)
+            cout << "user read: " << (S_IRUSR & statbuf.st_mode) << endl; //list permissions
             write(STDOUT_FILENO, perms, strlen(perms)); //not working
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
