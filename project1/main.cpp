@@ -13,7 +13,7 @@
 
 using namespace std;
 
-void SetNonCanonicalMode(int fd, struct termios *savedattributes){
+/*void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
     struct termios TermAttributes;
     
     // Make sure stdin is a terminal. 
@@ -33,16 +33,16 @@ void SetNonCanonicalMode(int fd, struct termios *savedattributes){
     tcsetattr(fd, TCSAFLUSH, &TermAttributes);
 }
 
-void ResetCanonicalMode(int fd, struct termios *savedattributes){
+void ResetCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
     tcsetattr(fd, TCSANOW, savedattributes);
 }
 
 void printNewLine() {
     char newLine = 0x0A;
     write(STDOUT_FILENO, &newLine, 1);
-}
+}*/
 
-string executeBackspace(string command) {
+/*string executeBackspace(string command) {
     if (command != "") {
         char *temp = "\b \b";
         write(STDOUT_FILENO, temp, strlen(temp));
@@ -53,9 +53,9 @@ string executeBackspace(string command) {
         write(STDOUT_FILENO, &audible, 1);
     }
     return command;
-}
+}*/
 
-vector<char *> parseParameters(string parameterString, char *token) { // assumes a non-empty parameter string
+/*vector<char *> parseParameters(string parameterString, char *token) { // assumes a non-empty parameter string
     vector<char *> parameterVector;
 
     char const *parameterCharArray = parameterString.c_str();
@@ -75,7 +75,6 @@ vector<char *> parseParameters(string parameterString, char *token) { // assumes
     
     }
 
-/* 
  while (parameterVector.empty() || parameterVector.back() != NULL) {
  cout << "in while" << endl;
  char *mytok = strtok(NULL, token);
@@ -83,7 +82,7 @@ vector<char *> parseParameters(string parameterString, char *token) { // assumes
  parameterVector.push_back(mytok);
  
  }
-*/
+
  
  
     //cout << "back: " << parameterVector[(parameterVector.size() - 1)] << endl;
@@ -121,20 +120,20 @@ vector<vector<char *> > checkAdditionalParameters(string parameterString) { // c
     
     //parameterVector.push_back(parseParameters(parameterString, "|<> "));
     return parameterVector;
-}
+}*/
 
 
-void executeInvalidCommand(string command) {
+/*void executeInvalidCommand(string command) {
     printNewLine();
     char *temp = "Failed to execute ";
     write(STDOUT_FILENO, temp, strlen(temp));
     write(STDOUT_FILENO, command.c_str(), strlen(command.c_str()));
     printNewLine();
-}
+}*/
 
 
 
-void executePwd(string parameterString) { // to be forked?
+/*void executePwd(string parameterString) { // to be forked?
     
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
@@ -202,9 +201,9 @@ void executePwd(string parameterString) { // to be forked?
     }
     
     
-}
+}*/
 
-void executeCd(string parameterString) {
+/*void executeCd(string parameterString) {
     if ((parameterString.length() == 0) || (parameterString[0] == ' ')) {
         printNewLine();
         
@@ -230,9 +229,9 @@ void executeCd(string parameterString) {
         executeInvalidCommand("");
     }
 
-}
+}*/
 
-void printShellPrompt() {
+/*void printShellPrompt() {
     char *path = NULL;
     path = getcwd(path, 0);
     
@@ -260,25 +259,107 @@ void printShellPrompt() {
     
     temp = "% ";
     write(STDOUT_FILENO, temp, strlen(temp));
+}*/
+
+vector<vector<char *> > parseCommand(string command) {
+    vector<char *> tokens;
+    vector<char *> commandVector, pipeVector, inputVector, outputVector;
+    vector<vector<char *> > parsedParameters;
+    string temp = "";
+
+    char const *commandTemp = command.c_str();
+    char commandC[command.length()];
+    
+    strcpy(commandC, commandTemp);
+    
+    char *token;
+    token = strtok(commandC, " ");
+    
+    while (token != NULL) {
+        tokens.push_back(token);
+        token = strtok(NULL, " ");
+    }
+    
+    cout << "working to here when hardcoded" << endl;
+    
+    
+    int i = 0;
+    char *currentToken;
+    while (i != tokens.size()) {
+        currentToken = tokens[i];
+        if (i == 0) {
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+                commandVector.push_back(currentToken);
+                i++;
+            }
+        }
+        else if (currentToken == "|") {
+            i++;
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+                temp = temp + currentToken + " ";
+                i++;
+            }
+            temp.pop_back();
+            pipeVector.push_back((char*)temp.c_str());
+        }
+        else if (currentToken == "<") {
+            i++;
+            if ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+                inputVector.push_back(currentToken);
+            }
+            else {
+                // error // FIXME
+            }
+            
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+                i++;
+            }
+        }
+        else if (currentToken == ">") {
+            i++;
+            if ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+                outputVector.push_back(currentToken);
+            }
+            else {
+                // error // FIXME
+            }
+            
+            while ((currentToken != "|") && (currentToken != "<") && (currentToken != ">")  && (i < strlen(token))) {
+                i++;
+            }
+        }
+    }
+    
+    parsedParameters.push_back(commandVector);
+    parsedParameters.push_back(pipeVector);
+    parsedParameters.push_back(inputVector);
+    parsedParameters.push_back(outputVector);
+    
+    return parsedParameters;
 }
 
-void directCommand(string command) {
+
+/*void directCommand(string command) {
     
-    char const *commandC = command.c_str();
-    string commandType = strtok((char *)commandC, " ");
+    vector<vector<char *> > parsedInput = parseCommand(command);
+    
+    //char const *commandC = command.c_str();
+    string commandType = parsedInput[0][0];
     
     //cout << "commandType: " << commandType << endl;
     
     //string commandType = command.substr(0,3); // FIXME
-    string parameterString;
+    //string parameterString;
     
-    int commandLength = commandType.length();
-    if (command.length() > commandLength) {
-        parameterString = command.substr (commandLength, (command.length() - commandLength));
-    }
-    else {
-        parameterString = "";
-    }
+    //int commandLength = commandType.length();
+    //if (command.length() > commandLength) {
+        //parameterString = command.substr (commandLength, (command.length() - commandLength));
+    //}
+    //else {
+        //parameterString = "";
+    //}
+    
+    
     
     if (commandType == "cd") {
         executeCd(parameterString);
@@ -292,15 +373,15 @@ void directCommand(string command) {
     else if (commandType == "ff") {
         cout << "ff" << endl;
     }
-    else if (command == "exit") {
+    else if (commandType == "exit") {
         printNewLine();
     }
     else {
         executeInvalidCommand(command);
     }
-}
+} */
 
-void executeArrows(deque<string> history, string &command, int &counter) {
+/*void executeArrows(deque<string> history, string &command, int &counter) {
     char nextChar;
     char audible = 0x07;
     
@@ -363,7 +444,7 @@ void executeArrows(deque<string> history, string &command, int &counter) {
             
         }
     }
-}
+}*/
 
 /*int main() {
 	struct termios SavedTermAttributes;
@@ -421,10 +502,9 @@ void executeArrows(deque<string> history, string &command, int &counter) {
 int main() {
     string mystring;
     vector<vector<char *> > parameters;
-    cin >> mystring;
-    //mystring = "";
-    parameters = checkAdditionalParameters(mystring);
-    
+    //cin >> mystring;
+    mystring = "ff param1 param2 | grep a | grep b < infile1 infile2 > outfile1 > outfile2";
+    parameters = parseCommand(mystring);
     
     for (int i=0; i < parameters.size(); i++) {
         for (int j=0; j < parameters[i].size(); j++) {
