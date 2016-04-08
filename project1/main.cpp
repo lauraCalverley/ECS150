@@ -221,7 +221,7 @@ void executeLs(vector<vector<char*> > parsedInput){
         }
     }
     else { // 1 parameter case
-        dir opendir(parsedInput[0][1]);
+        dir = opendir(parsedInput[0][1]);
         // while(((dp = readdir(dir)) != NULL) || dp->d_name != parsedInput[0][1]){ //loop through current directory to find parameter
         // }
         while((dp = readdir(dir)) != NULL){
