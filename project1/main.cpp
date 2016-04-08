@@ -4,6 +4,7 @@
 #include <termios.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <dirent.h>
@@ -209,23 +210,27 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
 void executeLs(vector<vector<char*> > parsedInput){
     printNewLine();
 
-    // CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/opendir.html
-    DIR * dir;
-    struct dirent *dp;
+    // CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/stat.html
+    DIR * dir; 
+    struct dirent *dp; 
+    struct stat statbuf;
+    char* perms; //permissions
 
     if(parsedInput[0].size() == 1){ //no parameters
-        dir = opendir(".");
-        while((dp = readdir(dir)) != NULL){
-            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
+        dir = opendir("."); //open the current directory
+        while((dp = readdir(dir)) != NULL){ //loop through directory
+            perms = stat(dp->d_name, &statbuf);
+            write(STDOUT_FILENO, perms, strlen(perms));
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
         }
     }
     else { // 1 parameter case
-        dir = opendir(parsedInput[0][1]);
+        dir = opendir(parsedInput[0][1]); //open the desired diredtory
         // while(((dp = readdir(dir)) != NULL) || dp->d_name != parsedInput[0][1]){ //loop through current directory to find parameter
         // }
         while((dp = readdir(dir)) != NULL){
-            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
         }
 
@@ -613,6 +618,7 @@ int main() {
 // http://www.cs.ecu.edu/karl/4630/sum01/example1.html
 // http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
 // http://pubs.opengroup.org/onlinepubs/009695399/functions/opendir.html
+// http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
 
 
 //LAURA Did
