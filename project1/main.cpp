@@ -453,12 +453,37 @@ void directCommand(string command) {
         externalCommand = 0;
     }
     
-    int num_children = externalCommand + parsedInput[1].size() + parsedInput[2].size() + parsedInput[3].size();
+    int num_children =  parsedInput[1].size() + parsedInput[2].size() + parsedInput[3].size() + 1;
     cout << num_children << endl;
     
+    int num_pipes = parsedInput[1].size();
+    int *pipefd;
+
+    // create all the pipes that will be needed
+
+    for (int i=0; i < num_pipes; i++) {
+        pipefd = new int[2];
+        pipe(pipefd);
+    }
+
+    for (int i=0; i < num_children; i++) {
+        // fork()
+        // if child
+            // do the redirects on files (< >) (using dup2 and such where you set all the pipe ends I think)
+            // do the redirects on the pipes (|)
+            // close all ends of all pipes
+        
+            // if an external function
+                // execvp
+            // else if an internal funtion (pwd, cd, etc.)
+                // exeucte<Function>
+            // else - error?? or do if: external, else: (if: internal, do it; else: error)
+    }
     
-
-
+    for (int i=0; i < num_children; i++) {
+        // wait() because this is the parent waiting for all children to finish executing
+    }
+    
 }
 
 
