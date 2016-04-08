@@ -102,7 +102,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         int childStatus;
         char read_msg[strlen(directoryName)];
 
-        char * args = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
+        vector<char *> args = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
         
         // create pipe
         if (pipe(fd) == -1) {
