@@ -63,65 +63,44 @@ void executeInvalidCommand(string command) {
     printNewLine();
 }
 
-/*void executePwd(string parameterString) { // to be forked?
+
+
+
+
+
+
+
+
+
+
+
+void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
     printNewLine();
 
-    vector<vector<char *> > parameters = checkAdditionalParameters(parameterString);
-    
-    if (!(parameters[0].empty()) && parameters[0][0] != NULL) { //pipe
+    if (!parsedInput[1].empty()) { //pipe
         cout << "pipe" << endl;
-        for (int i=0; i < parameters[0].size(); i++) {
-            cout << "parameters[pipe]: " << parameters[0][i] << "end pipe param" << endl;
-        }
-    }
-    if (parameters[0].size() == 0) {
-        cout << "empty" << endl;
     }
     
-    for (int i=0; i < parameters[0].size(); i++) {
-        cout << "parameters[|]: " << parameters[0][i] << "end | param" << endl;
-    }
-
-    
-    
-    if (parameters[1].size() == 0) {
-        cout << "empty" << endl;
-    }
-    
-    for (int i=0; i < parameters[1].size(); i++) {
-        cout << "parameters[<]: " << parameters[1][i] << "end < param" << endl;
-    }
-    
-    
-    if (parameters[2].size() == 0) {
-        cout << "empty" << endl;
-    }
-
-    for (int i=0; i < parameters[2].size(); i++) {
-        cout << "parameters[>]: " << parameters[2][i] << "end > param" << endl;
-    }
-    
-    if (!(parameters[2].empty()) && parameters[2][0] != NULL) { //redirect output
-        cout << "in the if" << endl;
+    if (!parsedInput[3].empty()) { //redirect output
+        cout << "redirect output" << endl;
+        
         // open a files for output
-        for (int i=0; i < parameters[2].size(); i++) {
-        }
-        int flags = O_CREAT | S_IRUSR | S_IWUSR; //FIXME // add | O_RDWR
-        //int flags = O_CREAT; //FIXME
+
+        //int flags = O_CREAT | S_IRUSR | S_IWUSR | O_RDWR;
         int outputFD;
         
-        for (int i=0; i < parameters[2].size(); i++) {
+        for (int i=0; i < parsedInput[3].size(); i++) {
             // create a file for each output vector entry
-            outputFD = open(parameters[2][i], flags); // returns the new file descriptor
+            outputFD = open(parsedInput[3][i], O_CREAT, 0777); // returns the new file descriptor // CITE http://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
             close(outputFD);
         }
             
         // write to final output vector entry
-        flags = S_IRUSR | S_IWUSR | O_RDWR;
-        outputFD = open(parameters[2][(parameters[2].size() - 1)], flags); // returns the new file descriptor
+        //flags = S_IRUSR | S_IWUSR | O_RDWR;
+        outputFD = open(parsedInput[3][(parsedInput[3].size() - 1)], O_RDWR, 0777); // returns the new file descriptor
         write(outputFD, directoryName, strlen(directoryName));
     }
     
@@ -129,9 +108,19 @@ void executeInvalidCommand(string command) {
         write(STDOUT_FILENO, directoryName, strlen(directoryName));
         printNewLine();
     }
-    
-    
-}*/
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 void executeCd(vector<vector<char *> > parsedInput) {
     printNewLine();
@@ -226,7 +215,6 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
             //cout << "end of if" << endl;
         }
         else if (!strcmp(currentToken, "|")) {
-            cout << __LINE__ << endl;
             temp = "";
             i++;
             if (i < tokens.size()) {
@@ -246,7 +234,6 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
             pipeVector.push_back(c);
         }
         else if (!strcmp(currentToken, "<")) {
-            cout << __LINE__ << endl;
             i++;
             if (i < tokens.size()) {
                 currentToken = tokens[i];
@@ -268,7 +255,6 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
             }
         }
         else if (!strcmp(currentToken, ">")) {
-            cout << __LINE__ << endl;
             i++;
             if (i < tokens.size()) {
                 currentToken = tokens[i];
@@ -322,7 +308,7 @@ void directCommand(string command) {
     parseCommand(command, parsedInput);
     
     string commandType = parsedInput[0][0];
-        
+    
     if (commandType == "cd") {
         executeCd(parsedInput);
     }
@@ -330,8 +316,8 @@ void directCommand(string command) {
         cout << "ls" << endl;
     }
     else if (commandType == "pwd") {
-        //executePwd(parsedInput);
-        cout << "pwd" << endl;
+        executePwd(parsedInput);
+        //cout << "pwd" << endl;
     }
     else if (commandType == "ff") {
         cout << "ff" << endl;
