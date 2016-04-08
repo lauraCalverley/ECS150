@@ -210,7 +210,36 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     }
 }
 
-
+void getPerms(string &perms, struct dirent* dp, struct stat statbuf){
+    stat(dp->d_name, &statbuf);
+    if(S_IRUSR & statbuf.st_mode){
+        perms += 'r';
+    } else {perms += ' ';}
+    if(S_IWUSR & statbuf.st_mode){
+        perms += 'w';
+    } else {perms += ' ';}
+    if(S_IXUSR & statbuf.st_mode){
+        perms += 'x';
+    } else {perms += ' ';}
+    if(S_IRGRP & statbuf.st_mode){
+        perms += 'r';
+    } else {perms += ' ';}
+    if(S_IWGRP & statbuf.st_mode){
+        perms += 'w';
+    } else {perms += ' ';}
+    if(S_IXGRP & statbuf.st_mode){
+        perms += 'x';
+    } else {perms += ' '};
+    if(S_IROTH & statbuf.st_mode){
+        perms += 'r';
+    } else {perms += ' ';}
+    if(S_IWOTH & statbuf.st_mode){
+        perms += 'w';
+    } else {perms += ' ';}
+    if(S_IXOTH & statbuf.st_mode){
+        perms += 'x';
+    } else {perms += ' ';}
+}
 
 
 void executeLs(vector<vector<char*> > parsedInput){
@@ -220,17 +249,18 @@ void executeLs(vector<vector<char*> > parsedInput){
     DIR * dir; 
     struct dirent *dp; 
     struct stat statbuf;
+    string makePerms = "";
     char* perms; //permissions
-    //bool userread;
 
     if(parsedInput[0].size() == 1){ //no parameters
         dir = opendir("."); //open the current directory
         while((dp = readdir(dir)) != NULL){ //loop through directory
-            stat(dp->d_name, &statbuf); //get stat
-            //userread = (S_IRUSR && statbuf.st_mode)
-            cout << "permissions: " << statbuf.st_mode << endl;
-            cout << "group exec: " << (S_IXGRP & statbuf.st_mode) << endl; //list permissions
-            //write(STDOUT_FILENO, perms, strlen(perms)); //not working
+            // stat(dp->d_name, &statbuf); //get stat
+            // cout << "permissions: " << statbuf.st_mode << endl;
+            // cout << "group exec: " << (S_IXGRP & statbuf.st_mode) << endl; //list permissions
+            getPerms(makePerms, dp, statbuf);
+            perms = makePerms.c_str();
+            write(STDOUT_FILENO, perms, strlen(perms)); 
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
         }
