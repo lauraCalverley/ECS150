@@ -100,7 +100,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     }
 
     if (!parsedInput[1].empty()) { //pipe
-        //cout << "pipe" << endl;
+        cout << "pipe" << endl;
         
         // for now, assume 1 pipe, need to make it work for multiple pipes / FIXME
         
