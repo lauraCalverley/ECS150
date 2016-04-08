@@ -261,10 +261,10 @@ vector<vector<char *> > checkAdditionalParameters(string parameterString) { // c
     write(STDOUT_FILENO, temp, strlen(temp));
 }*/
 
-vector<vector<char *> > parseCommand(string command) {
+void parseCommand(string command, vector<vector<char *> > &parameters) {
     vector<char *> tokens;
     vector<char *> commandVector, pipeVector, inputVector, outputVector;
-    vector<vector<char *> > parsedParameters;
+    //vector<vector<char *> > parsedParameters;
     string temp = "";
 
     char const *commandTemp = command.c_str();
@@ -287,7 +287,9 @@ vector<vector<char *> > parseCommand(string command) {
         currentToken = tokens[i];
         if (i == 0) {
             while (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
-                commandVector.push_back(currentToken);
+                char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+                strcpy(c, currentToken);
+                commandVector.push_back(c);
                 i++;
                 currentToken = tokens[i];
             }
@@ -304,7 +306,7 @@ vector<vector<char *> > parseCommand(string command) {
             }
             temp.pop_back();
 
-            char* c = new char[temp.length() + 1];
+            char* c = new char[temp.length() + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
             strcpy(c, (char*) temp.c_str());
             pipeVector.push_back(c);
         }
@@ -313,7 +315,9 @@ vector<vector<char *> > parseCommand(string command) {
             i++;
             currentToken = tokens[i];
             if (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
-                inputVector.push_back(currentToken);
+                char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+                strcpy(c, currentToken);
+                inputVector.push_back(c);
             }
             else {
                 // error // FIXME
@@ -331,7 +335,9 @@ vector<vector<char *> > parseCommand(string command) {
             i++;
             currentToken = tokens[i];
             if (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
-                outputVector.push_back(currentToken);
+                char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+                strcpy(c, currentToken);
+                outputVector.push_back(c);
             }
             else {
                 // error // FIXME
@@ -349,31 +355,11 @@ vector<vector<char *> > parseCommand(string command) {
         }
     }
     
-    cout << "out of while\n";
+    parameters.push_back(commandVector);
+    parameters.push_back(pipeVector);
+    parameters.push_back(inputVector);
+    parameters.push_back(outputVector);
     
-    
-    for (int i=0; i < commandVector.size(); i++) {
-        cout << "commandVector[" << i << "] is " << commandVector[i] << endl;
-    }
-
-    for (int i=0; i < pipeVector.size(); i++) {
-        cout << "pipeVector[" << i << "] is " << pipeVector[i] << endl;
-    }
-    
-    for (int i=0; i < inputVector.size(); i++) {
-        cout << "inputVector[" << i << "] is " << inputVector[i] << endl;
-    }
-    
-    for (int i=0; i < outputVector.size(); i++) {
-        cout << "outputVector[" << i << "] is " << outputVector[i] << endl;
-    }
-    
-    parsedParameters.push_back(commandVector);
-    parsedParameters.push_back(pipeVector);
-    parsedParameters.push_back(inputVector);
-    parsedParameters.push_back(outputVector);
-    
-    return parsedParameters;
 }
 
 
@@ -542,14 +528,14 @@ int main() {
     vector<vector<char *> > parameters;
     //cin >> mystring;
     mystring = "ff param1 param2 | grep a | grep b < infile1 infile2 > outfile1 > outfile2";
-    parameters = parseCommand(mystring);
+    parseCommand(mystring, parameters);
     
-    for (int i=0; i < parameters.size(); i++) {
+    /*for (int i=0; i < parameters.size(); i++) {
         for (int j=0; j < parameters[i].size(); j++) {
             cout << "parameters[" << i << "][" << j << "] is " << parameters[i][j] << endl;
         }
         cout << endl;
-    }
+    }*/
     
 }
 
