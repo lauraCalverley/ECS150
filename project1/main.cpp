@@ -13,7 +13,7 @@
 
 using namespace std;
 
-/*void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
+void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
     struct termios TermAttributes;
     
     // Make sure stdin is a terminal. 
@@ -40,9 +40,9 @@ void ResetCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
 void printNewLine() {
     char newLine = 0x0A;
     write(STDOUT_FILENO, &newLine, 1);
-}*/
+}
 
-/*string executeBackspace(string command) {
+string executeBackspace(string command) {
     if (command != "") {
         char *temp = "\b \b";
         write(STDOUT_FILENO, temp, strlen(temp));
@@ -53,85 +53,15 @@ void printNewLine() {
         write(STDOUT_FILENO, &audible, 1);
     }
     return command;
-}*/
-
-/*vector<char *> parseParameters(string parameterString, char *token) { // assumes a non-empty parameter string
-    vector<char *> parameterVector;
-
-    char const *parameterCharArray = parameterString.c_str();
-    char *mytok = strtok((char *)parameterCharArray, token);
-    cout << "mytok (before while): " << mytok << endl;
-    
-    if (mytok) {
-        parameterVector.push_back(mytok);
-    }
-    
-    while (mytok = strtok(NULL, token)
-           parameterVector.empty() || parameterVector.back() != NULL) {
-        cout << "in while" << endl;
-        char *mytok = strtok(NULL, token);
-        cout << "mytok: " << mytok << endl;
-        parameterVector.push_back(mytok);
-    
-    }
-
- while (parameterVector.empty() || parameterVector.back() != NULL) {
- cout << "in while" << endl;
- char *mytok = strtok(NULL, token);
- cout << "mytok: " << mytok << endl;
- parameterVector.push_back(mytok);
- 
- }
-
- 
- 
-    //cout << "back: " << parameterVector[(parameterVector.size() - 1)] << endl;
-    
-    if (parameterVector.size() >= 1) { //&& (parameterVector.back() == NULL)) {
-        parameterVector.pop_back();
-    }
-    
-    for (int i=0; i < parameterVector.size(); i++) {
-        cout << "parameterVector " << i << "for " << token << parameterVector[i] << endl;
-    }
-    
-    return parameterVector;
 }
 
-
-vector<vector<char *> > checkAdditionalParameters(string parameterString) { // change it to parse all parameters here, no separate calls
-    
-    // delimit on pipes and spaces and push to parameterVector[0]
-    
-    
-    vector<vector<char *> > parameterVector;
-    vector<char *> dummy;
-    
-    if (!parameterString.empty()) {
-        parameterVector.push_back(parseParameters(parameterString, "| ")); // piping
-        parameterVector.push_back(parseParameters(parameterString, "< ")); // input
-        parameterVector.push_back(parseParameters(parameterString, "> ")); // output
-    }
-    else {
-        parameterVector.push_back(dummy); // piping
-        parameterVector.push_back(dummy); // input
-        parameterVector.push_back(dummy); // output
-    }
-    
-    //parameterVector.push_back(parseParameters(parameterString, "|<> "));
-    return parameterVector;
-}*/
-
-
-/*void executeInvalidCommand(string command) {
+void executeInvalidCommand(string command) {
     printNewLine();
     char *temp = "Failed to execute ";
     write(STDOUT_FILENO, temp, strlen(temp));
     write(STDOUT_FILENO, command.c_str(), strlen(command.c_str()));
     printNewLine();
-}*/
-
-
+}
 
 /*void executePwd(string parameterString) { // to be forked?
     
@@ -203,35 +133,28 @@ vector<vector<char *> > checkAdditionalParameters(string parameterString) { // c
     
 }*/
 
-/*void executeCd(string parameterString) {
-    if ((parameterString.length() == 0) || (parameterString[0] == ' ')) {
-        printNewLine();
-        
-        char const *directoryName;
-        
-        if (parameterString.length() == 0) {
-            directoryName = getenv("HOME");
-        }
-        else {
-            directoryName = (parameterString.substr(1, parameterString.length()-1)).c_str();
-        }
-        
-        int success = chdir(directoryName);
-        
-        if (success == -1) {
-            char *errorMessage = "Error changing directory.";
-            write(STDOUT_FILENO, errorMessage, strlen(errorMessage));
-            printNewLine();
-        }
+void executeCd(vector<vector<char *> > parsedInput) {
+    printNewLine();
+    char const *directoryName;
+
+    if (parsedInput[0].size() == 1) {
+        directoryName = getenv("HOME");
     }
-    
     else {
-        executeInvalidCommand("");
+        
+        directoryName = parsedInput[0][1];
     }
+        
+    int success = chdir(directoryName);
+        
+    if (success == -1) {
+        char *errorMessage = "Error changing directory.";
+        write(STDOUT_FILENO, errorMessage, strlen(errorMessage));
+        printNewLine();
+    }
+}
 
-}*/
-
-/*void printShellPrompt() {
+void printShellPrompt() {
     char *path = NULL;
     path = getcwd(path, 0);
     
@@ -259,12 +182,11 @@ vector<vector<char *> > checkAdditionalParameters(string parameterString) { // c
     
     temp = "% ";
     write(STDOUT_FILENO, temp, strlen(temp));
-}*/
+}
 
 void parseCommand(string command, vector<vector<char *> > &parameters) {
     vector<char *> tokens;
     vector<char *> commandVector, pipeVector, inputVector, outputVector;
-    //vector<vector<char *> > parsedParameters;
     string temp = "";
 
     char const *commandTemp = command.c_str();
@@ -280,29 +202,42 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
         token = strtok(NULL, " ");
     }
     
-    cout << "working to here when hardcoded" << endl;
+    /*for (int i=0; i < tokens.size(); i++) {
+        cout << "tokens[" << i << "] is " << tokens[i] << endl;
+    }*/
+    
     int i = 0;
     char *currentToken;
     while (i < tokens.size()) {
-        currentToken = tokens[i];
+        //cout << "IN THE WHILE LOOP" << endl;
+        if (i < tokens.size()) {
+            currentToken = tokens[i];
+        }
         if (i == 0) {
             while (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
                 char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
                 strcpy(c, currentToken);
                 commandVector.push_back(c);
                 i++;
-                currentToken = tokens[i];
+                if (i < tokens.size()) {
+                    currentToken = tokens[i];
+                }
             }
+            //cout << "end of if" << endl;
         }
         else if (!strcmp(currentToken, "|")) {
             cout << __LINE__ << endl;
             temp = "";
             i++;
-            currentToken = tokens[i];
+            if (i < tokens.size()) {
+                currentToken = tokens[i];
+            }
             while (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
                 temp = temp + currentToken + " ";
                 i++;
-                currentToken = tokens[i];
+                if (i < tokens.size()) {
+                    currentToken = tokens[i];
+                }
             }
             temp.pop_back();
 
@@ -313,7 +248,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
         else if (!strcmp(currentToken, "<")) {
             cout << __LINE__ << endl;
             i++;
-            currentToken = tokens[i];
+            if (i < tokens.size()) {
+                currentToken = tokens[i];
+            }
             if (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
                 char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
                 strcpy(c, currentToken);
@@ -333,7 +270,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
         else if (!strcmp(currentToken, ">")) {
             cout << __LINE__ << endl;
             i++;
-            currentToken = tokens[i];
+            if (i < tokens.size()) {
+                currentToken = tokens[i];
+            }
             if (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
                 char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
                 strcpy(c, currentToken);
@@ -354,6 +293,20 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
             cout << "IN THE ELSE...UH OH" << endl;
         }
     }
+    //cout << "OUT OF THE WHILE LOOP" << endl;
+
+    /*if (commandVector.empty()){
+        commandVector.push_back("");
+    }
+    if (pipeVector.empty()){
+        pipeVector.push_back("");
+    }
+    if (inputVector.empty()){
+        inputVector.push_back("");
+    }
+    if (outputVector.empty()){
+        outputVector.push_back("");
+    }*/
     
     parameters.push_back(commandVector);
     parameters.push_back(pipeVector);
@@ -363,36 +316,22 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
 }
 
 
-/*void directCommand(string command) {
+void directCommand(string command) {
     
-    vector<vector<char *> > parsedInput = parseCommand(command);
+    vector<vector<char *> > parsedInput;
+    parseCommand(command, parsedInput);
     
-    //char const *commandC = command.c_str();
     string commandType = parsedInput[0][0];
-    
-    //cout << "commandType: " << commandType << endl;
-    
-    //string commandType = command.substr(0,3); // FIXME
-    //string parameterString;
-    
-    //int commandLength = commandType.length();
-    //if (command.length() > commandLength) {
-        //parameterString = command.substr (commandLength, (command.length() - commandLength));
-    //}
-    //else {
-        //parameterString = "";
-    //}
-    
-    
-    
+        
     if (commandType == "cd") {
-        executeCd(parameterString);
+        executeCd(parsedInput);
     }
     else if (commandType == "ls") {
         cout << "ls" << endl;
     }
     else if (commandType == "pwd") {
-        executePwd(parameterString);
+        //executePwd(parsedInput);
+        cout << "pwd" << endl;
     }
     else if (commandType == "ff") {
         cout << "ff" << endl;
@@ -403,9 +342,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
     else {
         executeInvalidCommand(command);
     }
-} */
+}
 
-/*void executeArrows(deque<string> history, string &command, int &counter) {
+void executeArrows(deque<string> history, string &command, int &counter) {
     char nextChar;
     char audible = 0x07;
     
@@ -468,9 +407,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
             
         }
     }
-}*/
+}
 
-/*int main() {
+int main() {
 	struct termios SavedTermAttributes;
 	SetNonCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
 
@@ -514,42 +453,46 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
         counter = -1;
 	}
     
-    for (int i=0; i < history.size(); i++) {
+    /*for (int i=0; i < history.size(); i++) {
         cout << history[i] << endl;
-    }
+    }*/
     
 	ResetCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
     
         return 1;
-} */
+}
 
-int main() {
+/*int main() {
     string mystring;
     vector<vector<char *> > parameters;
     //cin >> mystring;
-    mystring = "ff param1 param2 | grep a | grep b < infile1 infile2 > outfile1 > outfile2";
+    mystring = "cd";
     parseCommand(mystring, parameters);
     
-    /*for (int i=0; i < parameters.size(); i++) {
+    for (int i=0; i < parameters.size(); i++) {
         for (int j=0; j < parameters[i].size(); j++) {
             cout << "parameters[" << i << "][" << j << "] is " << parameters[i][j] << endl;
         }
         cout << endl;
-    }*/
+    }
     
-}
+}*/
 
 
 /* TO DO
- fix |<> tokenizing parameters
- execute other apps like grep, cat, etc. (execvp???) / get piping working
  get input redirection working - try hard coding a fake file name!
  get output redirection working
+ fill out time slots csv
+ execute other apps like grep, cat, etc. (execvp???)
+ get piping working
  add forking to pwd
  ls
+ 
  ff
  complete the README
  write the makefile
+
+ fix the space case: see > output vs >output
 */
 
 
