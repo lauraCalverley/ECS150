@@ -4,6 +4,7 @@
 #include <termios.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <sys/types.h>
 
 #include <string>
 #include <vector>
@@ -81,10 +82,48 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     printNewLine();
 
     if (!parsedInput[1].empty()) { //pipe
-        cout << "pipe" << endl;
+        //cout << "pipe" << endl;
+        
+        // for now, assume 1 pipe, need to make it work for multiple pipes / FIXME
+        
+        // cite the textbook
+        int fd[2]; // CITE p. 143 of the textbook
+        pid_t pid;
+        char read_msg[strlen(directoryName)];
+        
+        // create pipe
+        if (pipe(fd) == -1) {
+            cout << "ERROR" << endl;
+        }
+        
+        // fork a child process
+        pid = fork();
+        
+        
+        // read = 0
+        // write = 1
+        
+        if (pid <0) {
+            cout << "ERROR" << endl;
+        }
+        
+        if (pid > 0) { // parent process AKA ashell
+            close(fd[0]);
+            write(fd[1], directoryName, strlen(directoryName));
+            close(fd[1]);
+        }
+        
+        else { // child process like grep, cat, etc.
+            close(fd[1]);
+            read(fd[0], read_msg, strlen(directoryName));
+            
+            //int execvp(const char *file, char *const argv[]);
+            close(fd[0]);
+        }
+        //printNewLine(); // is this right??
     }
     
-    if (!parsedInput[3].empty()) { //redirect output
+    else if (!parsedInput[3].empty()) { //redirect output
         cout << "redirect output" << endl;
         
         // open a files for output
@@ -105,6 +144,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     }
     
     else {
+        cout << "in the else" << endl;
         write(STDOUT_FILENO, directoryName, strlen(directoryName));
         printNewLine();
     }
@@ -486,4 +526,5 @@ int main() {
 //  Nitta noncanmode.c
 // http://www.ascii-code.com/
 // http://www.cplusplus.com/forum/beginner/16987/
+// cat temp.c > test2.txt
 
