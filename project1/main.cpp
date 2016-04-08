@@ -119,7 +119,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         char* command = parsedInput[1][0];
 
         cout << "command: " << command << endl;
-        char commandA[strlen(command);];
+        char commandA[strlen(command)];
         strcpy(commandA, command);
 
         char* args[strlen(command)];
