@@ -118,7 +118,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         //could not reference a char** in parameters
         //so parsePipeCommand() is inline
         //beginning of parsePipeCommand()
-        char* command = parsedInput[1][1];
+        char* command = parsedInput[1][0];
 
         cout << __LINE__ << endl;
         cout << "command: " << command << endl;
