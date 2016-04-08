@@ -68,14 +68,17 @@ void executeInvalidCommand(string command) {
 
 
 char** parsePipeCommand(char * command){
-    char** tokens;
+    char* tokens[strlen(command)];
     char *token;
     token = strtok(command, " ");
+    int i = 0;
     
     while (token != NULL) {
-        tokens.push_back(token);
+        tokens[i] = token;
         token = strtok(NULL, " ");
+        i++;
     }
+    tokens[i] = NULL;
     return tokens;
 }
 
@@ -547,5 +550,5 @@ int main() {
 // http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
 
 
- //LAURA Did
-
+//LAURA Did
+//  created parsePipeCommand function which parses 1 pipe command
