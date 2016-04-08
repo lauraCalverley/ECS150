@@ -66,7 +66,7 @@ void executeInvalidCommand(string command) {
 
 
 
-
+//currently not used due to return issues: see executePwd
 char** parsePipeCommand(char * command){
     char* tokens[strlen(command)];
     char *token;
@@ -105,7 +105,29 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         int childStatus;
         char read_msg[strlen(directoryName)];
 
-        char* args[] = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
+        //char* args[] = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
+
+        //could not return due to loss of pointers once out of scope of function
+        //could not reference a char** in parameters
+        //so parsePipeCommand() is inline
+        //beginning of parsePipeCommand()
+        char* command = parsedInput[1][1];
+        char commandA[strlen(command)];
+        strcpy(commandA, command);
+
+        char* args[strlen(command)];
+        char *token;
+
+        token = strtok(commandA, " ");
+        int i = 0;
+        while (token != NULL) {
+            args[i] = token;
+            token = strtok(NULL, " ");
+            i++;
+        }
+        args[i] = NULL;
+        //end of parsePipeCommand()
+
         
         // create pipe
         if (pipe(fd) == -1) {
