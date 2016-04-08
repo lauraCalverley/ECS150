@@ -205,7 +205,21 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
 
 
 
+void executeLs(vector<vector<char*> > parsedInput){
+    printNewLine();
 
+    // CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/opendir.html
+    DIR * dir;
+    struct dirent *dp;
+
+    if(parsedInput[0].size() == 1){
+        dir = opendir(".");
+        while((dp = readdir(dir)) != NULL){
+            write(STDOUT_FILENO, dp, strlen(dp));
+            printNewLine();
+        }
+    }
+}
 
 
 
@@ -410,7 +424,8 @@ void directCommand(string command) {
         executeCd(parsedInput);
     }
     else if (commandType == "ls") {
-        cout << "ls" << endl;
+        //cout << "ls" << endl;
+        executeLs(parsedInput;)
     }
     else if (commandType == "pwd") {
         executePwd(parsedInput);
@@ -586,6 +601,7 @@ int main() {
 // cat temp.c > test2.txt
 // http://www.cs.ecu.edu/karl/4630/sum01/example1.html
 // http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
+// http://pubs.opengroup.org/onlinepubs/009695399/functions/opendir.html
 
 
 //LAURA Did
