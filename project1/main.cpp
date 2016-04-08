@@ -154,6 +154,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         if (pid == 0) { // child process like grep, cat, etc. AKA ashell
             cout << __LINE__ << endl;
             dup2(fd[0], 0);
+            close(fd[0]);
             close(fd[1]);
             //read(fd[0], read_msg, strlen(directoryName));
             cout << __LINE__ << endl;
@@ -169,6 +170,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
             cout << __LINE__ << endl;
             dup2(fd[1], 1);
             close(fd[0]);
+            close(fd[1]);
         }
         //printNewLine(); // is this right??
     }
