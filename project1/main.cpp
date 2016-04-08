@@ -67,8 +67,8 @@ void executeInvalidCommand(string command) {
 
 
 
-char* const* parsePipeCommand(char * command){
-    char* const* tokens;
+char** parsePipeCommand(char * command){
+    char* tokens[];
     char *token;
     token = strtok(command, " ");
     
@@ -102,7 +102,7 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         int childStatus;
         char read_msg[strlen(directoryName)];
 
-        vector<char *> args = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
+        char* args[] = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
         
         // create pipe
         if (pipe(fd) == -1) {
