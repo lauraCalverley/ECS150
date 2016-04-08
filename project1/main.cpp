@@ -110,8 +110,6 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         int childStatus;
         char read_msg[strlen(directoryName)];
 
-        cout << __LINE__ << endl;
-
         //char* args[] = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
 
         //could not return due to loss of pointers once out of scope of function
@@ -120,21 +118,12 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
         //beginning of parsePipeCommand()
         char* command = parsedInput[1][0];
 
-        cout << __LINE__ << endl;
         cout << "command: " << command << endl;
-        int size = strlen(command);
-        cout << __LINE__ << endl;
-        char commandA[size];
-        cout << __LINE__ << endl;
+        char commandA[strlen(command);];
         strcpy(commandA, command);
-
-        cout << __LINE__ << endl;
 
         char* args[strlen(command)];
         char *token;
-
-        cout << __LINE__ << endl;
-
 
         token = strtok(commandA, " ");
         int i = 0;
