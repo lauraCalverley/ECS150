@@ -95,6 +95,10 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     directoryName = getcwd(directoryName, 0);
     printNewLine();
 
+    for(int i = 0; i < parsedInput[1].size(); i++){
+        cout << "parsedInput[1][" << i << "]: "<< parsedInput[1][i] << endl;
+    }
+
     if (!parsedInput[1].empty()) { //pipe
         //cout << "pipe" << endl;
         
