@@ -290,6 +290,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     dir = opendir(directory);
     while((dp = readdir(dir)) != NULL){
         cout << "in the while loop\n";
+        cout << dp->d_name << endl;
         if(dp->d_type == DT_DIR){
             cout << "in the if\n";
             executeFf(parsedInput, dp->d_name);
