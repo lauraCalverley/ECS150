@@ -293,6 +293,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             executeFf(parsedInput, dp->d_name);
         }
         else if(parsedInput[0][0] == dp->d_name){
+            cout << "executeff else if" << endl;
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
             printNewLine();
         }
