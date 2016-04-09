@@ -267,12 +267,13 @@ void executeLs(vector<vector<char*> > parsedInput){
         }
     }
     else { // 1 parameter case
-        dir = opendir(parsedInput[0][1]); //open the desired diredtory
-        // while(((dp = readdir(dir)) != NULL) || dp->d_name != parsedInput[0][1]){ //loop through current directory to find parameter
-        // }
+        dir = opendir(parsedInput[0][1]); //open the desired directory
         while((dp = readdir(dir)) != NULL){
+            getPerms(makePerms, dp, statbuf);
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
+            makePerms = "";
         }
 
     }
@@ -672,3 +673,10 @@ int main() {
  // @142
  // @201 We need to use dup2 for in and out redirects
  // @208 We need to have 1 child for each command (including pwd, ls, etc..)
+
+
+//things to test (no internet)
+//  ls with parameters
+
+//things to do
+//  first character of ls
