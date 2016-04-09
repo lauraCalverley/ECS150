@@ -269,8 +269,8 @@ void executeLs(vector<vector<char*> > parsedInput){
     else { // 1 parameter case
         dir = opendir(parsedInput[0][1]); //open the desired directory
         while((dp = readdir(dir)) != NULL){
-            getPerms(makePerms, dp, statbuf);
-            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
+            perms = getPerms(makePerms, dp, statbuf);
+            write(STDOUT_FILENO, perms, strlen(perms));
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
             makePerms = "";
