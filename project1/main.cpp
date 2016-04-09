@@ -289,7 +289,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     struct dirent *dp;
     dir = opendir(directory);
     while((dp = readdir(dir)) != NULL){
-        cout << "in the while loop\n";
+        cout << "dp->d_name: " << dp->d_name << endl;
         cout << !strcmp(dp->d_name, ".") << endl;
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".")){
             cout << "in the if\n";
