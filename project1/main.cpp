@@ -212,6 +212,9 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
 
 void getPerms(string &perms, struct dirent* dp, struct stat statbuf){
     stat(dp->d_name, &statbuf);
+    if(dp->d_type == "DT_DIR"){
+        perms += 'd';
+    } else {perms += ' ';}
     if(S_IRUSR & statbuf.st_mode){
         perms += 'r';
     } else {perms += '-';}
