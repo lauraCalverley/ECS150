@@ -284,7 +284,21 @@ void executeLs(vector<vector<char*> > parsedInput){
 }
 
 
+void executeFf(vector<vector<char*> > parsedInput, char* directory){
+    DIR * dir;
+    struct dirent *dp;
+    dir = opendir(directory);
+    while((dp = readdir(dir)) != NULL){
+        if(dp->d_type == DT_DIR){
+            executeFf(parsedInput, dp->d_name);
+        }
+        else if(parsedInput[0][0] == dp->d_name){
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
+            printNewLine();
+        }
+    }
 
+}
 
 
 
@@ -486,7 +500,6 @@ void directCommand(string command) {
         executeCd(parsedInput);
     }
     else if (commandType == "ls") {
-        //cout << "ls" << endl;
         executeLs(parsedInput);
     }
     else if (commandType == "pwd") {
@@ -494,7 +507,8 @@ void directCommand(string command) {
         //cout << "pwd" << endl;
     }
     else if (commandType == "ff") {
-        cout << "ff" << endl;
+        //cout << "ff" << endl;
+        executeFf(parsedInput, ".");
     }
     else if (commandType == "exit") {
         printNewLine();
@@ -684,3 +698,4 @@ int main() {
 
 //things to do
 //  first character of ls
+//  fix the different set of permissions given when called at different levels in ls
