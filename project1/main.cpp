@@ -439,50 +439,154 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
 void directCommand(string command) {
     
     vector<vector<char *> > parsedInput;
-    
-    parseCommand(command, parsedInput);
-    // 0 = command and it's direct params
-    // 1 is piping
-    // 2 is input redirect
-    // 3 is output redirect
+    parseCommand(command, parsedInput); // 0 = command and it's direct params, 1 is piping, 2 is input redirect, 3 is output redirect
     
     string commandType = parsedInput[0][0];
     
-    bool externalCommand = 1;
-    if ( (commandType == "cd") || (commandType == "ls") || (commandType == "pwd") || (commandType == "ff") || (commandType == "exit")) {
-        externalCommand = 0;
+    int pipeFd[2];
+    pipe(pipeFd);
+    int pid = fork();
+    
+    if (pid==0) {
+        dup2(pipeFd[0], 0); // (old, new)
+        dup2(pipeFd[1], 0); // (old, new)
     }
     
+    
+/*
     int num_children =  parsedInput[1].size() + parsedInput[2].size() + parsedInput[3].size() + 1;
-    cout << num_children << endl;
     
     int num_pipes = parsedInput[1].size();
     int *pipefd;
+    vector<int *> pipeFds; // vector to store all the pipe FDs created
 
     // create all the pipes that will be needed
-
     for (int i=0; i < num_pipes; i++) {
         pipefd = new int[2];
+        pipeFds.push_back(pipefd);
         pipe(pipefd);
     }
-
-    for (int i=0; i < num_children; i++) {
-        // fork()
-        // if child
+    
+    // create all the output files that will be needed
+    int outputFD;
+    vector<int> outfiles; // vector to hold the pids of the created children
+    for (int i=0; i < parsedInput[3].size(); i++) {
+        // create a file for each output vector entry
+        outputFD = open(parsedInput[3][i], O_CREAT, 0777); // returns the new file descriptor // CITE http://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
+        outfiles.push_back(outputFD);
+        close(outputFD);
+    }
+    
+    pid_t pid; // process id
+    vector<pid_t> children; // vector to hold the pids of the created children
+/*
+/*
+    //for (int i=0; i < num_children; i++) {
+    for (int i=0; i < num_pipes+1; i++) {
+        pid = fork();
+        if (pid == 0) {
+            children.push_back(pid);
             // do the redirects on files (< >) (using dup2 and such where you set all the pipe ends I think)
+            // int dup2(int oldfd, int newfd);
+            
             // do the redirects on the pipes (|)
             // close all ends of all pipes
-        
+            cout << __LINE__ << endl;
+            dup2(pipeFds[i][], );// old, new
+            
+            
+            //dup2(fd[0], 0);
+            //close(fd[0]);
+            //close(fd[1]);
+            //read(fd[0], read_msg, strlen(directoryName));
+            
             // if an external function
-                // execvp
+               // execvp(args[0], args);
             // else if an internal funtion (pwd, cd, etc.)
                 // exeucte<Function>
             // else - error?? or do if: external, else: (if: internal, do it; else: error)
+        }
     }
     
     for (int i=0; i < num_children; i++) {
-        // wait() because this is the parent waiting for all children to finish executing
+        // this is the parent waiting for all children to finish executing
+        waitpid(children[i], NULL, WEXITED); //pid_t waitpid(pid_t pid, int *status, int options);
     }
+*/
+    
+    
+ /*
+    
+    pid_t pid;
+    int childStatus;
+    char read_msg[strlen(directoryName)];
+    
+    //char* args[] = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
+    
+    //could not return due to loss of pointers once out of scope of function
+    //could not reference a char** in parameters
+    //so parsePipeCommand() is inline
+    //beginning of parsePipeCommand()
+    char* command = parsedInput[1][0];
+    
+    cout << "command: " << command << endl;
+    char commandA[strlen(command) + 1];
+    strcpy(commandA, command);
+    
+    char* args[strlen(command)];
+    char *token;
+    
+    token = strtok(commandA, " ");
+    int i = 0;
+    while (token != NULL) {
+        args[i] = token;
+        token = strtok(NULL, " ");
+        i++;
+    }
+    args[i] = NULL;
+    //end of parsePipeCommand()
+    
+    
+    // create pipe
+    if (pipe(fd) == -1) {
+        cout << "ERROR" << endl;
+    }
+    
+    // fork a child process
+    pid = fork();
+    
+    // read = 0
+    // write = 1
+    //CITE http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
+    if (pid <0) {
+        cout << "ERROR" << endl;
+    }
+    
+    if (pid == 0) { // child process like grep, cat, etc. AKA ashell
+        cout << __LINE__ << endl;
+        dup2(fd[0], 0);
+        close(fd[0]);
+        close(fd[1]);
+        //read(fd[0], read_msg, strlen(directoryName));
+        cout << __LINE__ << endl;
+        execvp(args[0], args);
+        cout << __LINE__ << endl;
+        //close(fd[0]);
+        
+    }
+    
+    else { // parent process  AKA ashell
+        //CITE http://www.cs.ecu.edu/karl/4630/sum01/example1.html
+        wait(&childStatus); //change to waitpid if waiting for one specific child from multiple children
+        cout << __LINE__ << endl;
+        dup2(fd[1], 1);
+        close(fd[0]);
+        close(fd[1]);
+    }
+    //printNewLine(); // is this right??
+*/
+    
+    
     
 }
 
@@ -490,10 +594,10 @@ void directCommand(string command) {
 
 /*
  void directCommand(string command) {
-    
+ 
     vector<vector<char *> > parsedInput;
     parseCommand(command, parsedInput);
-    
+ 
     string commandType = parsedInput[0][0];
     
     if (commandType == "cd") {
