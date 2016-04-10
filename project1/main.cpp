@@ -290,7 +290,8 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     cout << "directory 1: " << directory << endl;
     dir = opendir(directory);
     cout << "initial directory: " << directory << endl;
-    string path = directory + '/';
+    string path = directory;
+    path += '/';
     cout << "initial path: " << path << endl;
     const char* output;
     while((dp = readdir(dir)) != NULL){
