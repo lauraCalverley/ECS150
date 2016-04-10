@@ -312,7 +312,6 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             path.erase(path.size() - strlen(dp->d_name), path.npos);
         }
     }
-    printNewLine();
 
 }
 
@@ -525,6 +524,7 @@ void directCommand(string command) {
     else if (commandType == "ff") {
         //cout << "ff" << endl;
         executeFf(parsedInput, ".");
+        printNewLine();
     }
     else if (commandType == "exit") {
         printNewLine();
