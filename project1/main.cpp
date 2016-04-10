@@ -290,6 +290,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     dir = opendir(directory);
     string path = directory;
     path += '/';
+    printNewLine();
     const char* output;
     while((dp = readdir(dir)) != NULL){
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
@@ -301,7 +302,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             output = path.c_str();
             write(STDOUT_FILENO, (char*)output, strlen(output));
             printNewLine();
-            //path.erase(path.size() - strlen(dp->d_name), path.npos);
+            path.erase(path.size() - strlen(dp->d_name), path.npos);
         }
     }
 
