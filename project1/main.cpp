@@ -209,8 +209,8 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     }
 }
 
-void getPerms(string &perms, struct dirent* dp, struct stat statbuf){
-    stat(dp->d_name, &statbuf);
+void getPerms(string &perms, struct dirent* dp, struct stat statbuf, string path){
+    stat(path.c_str(), &statbuf);
     if(dp->d_type == DT_DIR){
         perms += 'd';
     } else {perms += '-';}
@@ -251,16 +251,18 @@ void executeLs(vector<vector<char*> > parsedInput){
     DIR * dir; 
     struct dirent *dp; 
     struct stat statbuf;
+    string filePath;
     string makePerms = "";
     const char* perms; //permissions
 
+    char *directoryPath = NULL;
+    directoryPath = getcwd(directoryPath, 0);
+    
     if(parsedInput[0].size() == 1){ //no parameters
         dir = opendir("."); //open the current directory
         while((dp = readdir(dir)) != NULL){ //loop through directory
-            // stat(dp->d_name, &statbuf); //get stat
-            // cout << "permissions: " << statbuf.st_mode << endl;
-            //cout << "is directory: " << (S_ISDIR(statbuf.st_mode)) << endl; //list permissions
-            getPerms(makePerms, dp, statbuf);
+            filePath = (string)directoryPath + "/" + (string)(dp->d_name); // build absolute file path
+            getPerms(makePerms, dp, statbuf, filePath);
             makePerms = makePerms + " "; // insert space character between permissions and file name
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms)); 
@@ -271,8 +273,11 @@ void executeLs(vector<vector<char*> > parsedInput){
     }
     else { // 1 parameter case
         dir = opendir(parsedInput[0][1]); //open the desired directory
+        char *directoryPath = NULL;
+        directoryPath = getcwd(directoryPath, 0);
         while((dp = readdir(dir)) != NULL){
-            getPerms(makePerms, dp, statbuf);
+            filePath = (string)directoryPath + "/" + parsedInput[0][1] + "/" + (string)(dp->d_name); // build absolute file path
+            getPerms(makePerms, dp, statbuf, filePath);
             makePerms = makePerms + " "; // insert space character between permissions and file name
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms));
