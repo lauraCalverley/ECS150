@@ -305,7 +305,6 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
                 newDirectory = path.c_str();
                 executeFf(parsedInput, (char*)newDirectory);
                 path.erase(path.size() - strlen(dp->d_name), path.npos);
-                //cout << "path: " << path << endl;
             }
             else if(!strcmp(parsedInput[0][1], dp->d_name)){
                 path += dp->d_name;
@@ -318,9 +317,6 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
 		
     }
 }
-
-
-
 
 
 void executeCd(vector<vector<char *> > parsedInput) {
@@ -696,6 +692,7 @@ int main() {
  write the makefile
 
  fix the space case: see > output vs >output
+ deal with file/directory names that include a space or other escaped characters
 */
 
 
