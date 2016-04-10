@@ -301,7 +301,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             output = path.c_str();
             write(STDOUT_FILENO, (char*)output, strlen(output));
             printNewLine();
-            path.erase(path.size() - strlen(dp->d_name), path.npos);
+            //path.erase(path.size() - strlen(dp->d_name), path.npos);
         }
     }
 
