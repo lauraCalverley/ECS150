@@ -287,12 +287,9 @@ void executeLs(vector<vector<char*> > parsedInput){
 void executeFf(vector<vector<char*> > parsedInput, char* directory){
     DIR * dir;
     struct dirent *dp;
-    cout << "directory 1: " << directory << endl;
     dir = opendir(directory);
-    cout << "initial directory: " << directory << endl;
     string path = directory;
     path += '/';
-    cout << "initial path: " << path << endl;
     const char* output;
     while((dp = readdir(dir)) != NULL){
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
