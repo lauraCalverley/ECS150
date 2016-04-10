@@ -295,9 +295,9 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     while((dp = readdir(dir)) != NULL){
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
             path += dp->d_name;
-            path += '/';
-            cout << "directory path: " << path << endl;
             executeFf(parsedInput, dp->d_name);
+            cout << "directory path: " << path << endl;
+            path += '/';            
         }
         else if(!strcmp(parsedInput[0][1], dp->d_name)){
             path += dp->d_name;
