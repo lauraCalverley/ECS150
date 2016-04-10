@@ -204,7 +204,6 @@ void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     }
     
     else {
-        cout << "in the else" << endl;
         write(STDOUT_FILENO, directoryName, strlen(directoryName));
         printNewLine();
     }
@@ -262,6 +261,7 @@ void executeLs(vector<vector<char*> > parsedInput){
             // cout << "permissions: " << statbuf.st_mode << endl;
             //cout << "is directory: " << (S_ISDIR(statbuf.st_mode)) << endl; //list permissions
             getPerms(makePerms, dp, statbuf);
+            makePerms = makePerms + " "; // insert space character between permissions and file name
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms)); 
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
@@ -273,6 +273,7 @@ void executeLs(vector<vector<char*> > parsedInput){
         dir = opendir(parsedInput[0][1]); //open the desired directory
         while((dp = readdir(dir)) != NULL){
             getPerms(makePerms, dp, statbuf);
+            makePerms = makePerms + " "; // insert space character between permissions and file name
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms));
             write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
