@@ -302,6 +302,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             executeFf(parsedInput, (char*)newDirectory);
             cout << "directory path: " << path << endl;
             //path += '/';            
+            path.erase(path.size() - strlen(dp->d_name), path.npos);
         }
         else if(!strcmp(parsedInput[0][1], dp->d_name)){
             path += dp->d_name;
