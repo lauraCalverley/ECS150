@@ -289,7 +289,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     struct dirent *dp;
     dir = opendir(directory);
     string path = directory;
-    char* newDirectory;
+    const char* newDirectory;
     path += '/';
     cout << "path being executed next: " << path << endl;
     printNewLine();
@@ -299,7 +299,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             path += dp->d_name;
             cout << "path being executed next: " << path << endl;
             newDirectory = path.c_str();
-            executeFf(parsedInput, newDirectory);
+            executeFf(parsedInput, (char*)newDirectory);
             cout << "directory path: " << path << endl;
             path += '/';            
         }
