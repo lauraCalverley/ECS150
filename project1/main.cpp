@@ -289,6 +289,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     struct dirent *dp;
     dir = opendir(directory);
     string path = directory;
+    char* newDirectory;
     path += '/';
     cout << "path being executed next: " << path << endl;
     printNewLine();
@@ -297,7 +298,8 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
             path += dp->d_name;
             cout << "path being executed next: " << path << endl;
-            executeFf(parsedInput, dp->d_name);
+            newDirectory = path.c_str();
+            executeFf(parsedInput, newDirectory);
             cout << "directory path: " << path << endl;
             path += '/';            
         }
