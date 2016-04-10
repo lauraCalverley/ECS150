@@ -289,6 +289,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     struct dirent *dp;
     dir = opendir(directory);
     string path = directory + "/";
+    cout << "initial path: " << path << endl;
     const char* output;
     while((dp = readdir(dir)) != NULL){
         cout << !strcmp(dp->d_name, ".") << endl;
