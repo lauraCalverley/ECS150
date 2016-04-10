@@ -9,12 +9,6 @@
 #include <sys/wait.h>
 #include <dirent.h>
 
-#include <pwd.h>
-#include <grp.h>
-#include <time.h>
-#include <locale.h>
-#include <langinfo.h>
-
 #include <string>
 #include <vector>
 #include <deque>
@@ -291,32 +285,41 @@ void executeLs(vector<vector<char*> > parsedInput){
 
 
 void executeFf(vector<vector<char*> > parsedInput, char* directory){
-    DIR * dir;
-    struct dirent *dp;
-    dir = opendir(directory);
-    string path = directory;
-    const char* newDirectory;
-    path += '/';
-    //cout << "path being executed next: " << path << endl;
-    //printNewLine();
-    const char* output;
-    while((dp = readdir(dir)) != NULL){
-        if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
-            path += dp->d_name;
-            //cout << "path being executed next: " << path << endl;
-            newDirectory = path.c_str();
-            executeFf(parsedInput, (char*)newDirectory);
-            //cout << "directory path: " << path << endl;
-            //path += '/';            
-            path.erase(path.size() - strlen(dp->d_name), path.npos);
-        }
-        else if(!strcmp(parsedInput[0][1], dp->d_name)){
-            path += dp->d_name;
-            output = path.c_str();
-            printNewLine();
-            write(STDOUT_FILENO, (char*)output, strlen(output));
-            path.erase(path.size() - strlen(dp->d_name), path.npos);
-        }
+    if (parsedInput[0].size() == 1) {
+        char *errorMessage = "ff command requires a filename!";
+        printNewLine();
+        write(STDOUT_FILENO, errorMessage, strlen(errorMessage));
+    }
+    else {
+    
+	    DIR * dir;
+	    struct dirent *dp;
+	    dir = opendir(directory);
+	    string path = directory;
+	    const char* newDirectory;
+	    path += '/';
+	    //cout << "path being executed next: " << path << endl;
+	    //printNewLine();
+	    const char* output;
+	    while((dp = readdir(dir)) != NULL){
+            if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
+                path += dp->d_name;
+                //cout << "path being executed next: " << path << endl;
+                newDirectory = path.c_str();
+                executeFf(parsedInput, (char*)newDirectory);
+                //cout << "directory path: " << path << endl;
+                //path += '/';
+                path.erase(path.size() - strlen(dp->d_name), path.npos);
+            }
+            else if(!strcmp(parsedInput[0][1], dp->d_name)){
+                path += dp->d_name;
+                output = path.c_str();
+                printNewLine();
+                write(STDOUT_FILENO, (char*)output, strlen(output));
+                path.erase(path.size() - strlen(dp->d_name), path.npos);
+            }
+	    }
+		
     }
 
 }
