@@ -532,6 +532,14 @@ void directCommand(string command) {
     }
     else if (commandType == "ff") {
         //cout << "ff" << endl;
+        //void executeFf(vector<vector<char*> > parsedInput, char* directory){
+        /*if ((parsedInput[0].size() >= 2) && (parsedInput[0][2] != NULL)) {
+            char *directory = ("./" + (string)parsedInput[0][2]).c_str();
+            executeFf(parsedInput, directory);
+        }
+        else {
+            executeFf(parsedInput, ".");
+        } */
         executeFf(parsedInput, ".");
         printNewLine();
     }
