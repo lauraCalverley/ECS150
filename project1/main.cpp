@@ -287,6 +287,7 @@ void executeLs(vector<vector<char*> > parsedInput){
 void executeFf(vector<vector<char*> > parsedInput, char* directory){
     DIR * dir;
     struct dirent *dp;
+    cout << "directory 1: " << directory << endl;
     dir = opendir(directory);
     cout << "initial directory: " << directory << endl;
     string path = directory + '/';
