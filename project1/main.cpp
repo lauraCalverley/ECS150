@@ -288,18 +288,20 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     DIR * dir;
     struct dirent *dp;
     dir = opendir(directory);
-    cout << "parsedInput[0][0]: " << parsedInput[0][1] << endl;
+    string path = directory + '/';
+    const char* output;
     while((dp = readdir(dir)) != NULL){
-        cout << "dp->d_name: " << dp->d_name << endl;
         cout << !strcmp(dp->d_name, ".") << endl;
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
-            cout << "in the if\n";
+            path += dp->d_name;
             executeFf(parsedInput, dp->d_name);
         }
         else if(!strcmp(parsedInput[0][1], dp->d_name)){
-            cout << "executeff else if" << endl;
-            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name));
+            path += dp->d_name;
+            output = path.c_str();
+            write(STDOUT_FILENO, (char*)output, strlen(output));
             printNewLine();
+            path.erase(path.npos - strlen(dp->d_name), path.npos);
         }
     }
 
