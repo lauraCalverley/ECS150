@@ -288,6 +288,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     DIR * dir;
     struct dirent *dp;
     dir = opendir(directory);
+    cout << "parsedInput[0][0]: " << parsedInput[0][0]; << endl;
     while((dp = readdir(dir)) != NULL){
         cout << "dp->d_name: " << dp->d_name << endl;
         cout << !strcmp(dp->d_name, ".") << endl;
