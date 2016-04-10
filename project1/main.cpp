@@ -291,16 +291,16 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     string path = directory;
     const char* newDirectory;
     path += '/';
-    cout << "path being executed next: " << path << endl;
+    //cout << "path being executed next: " << path << endl;
     printNewLine();
     const char* output;
     while((dp = readdir(dir)) != NULL){
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
             path += dp->d_name;
-            cout << "path being executed next: " << path << endl;
+            //cout << "path being executed next: " << path << endl;
             newDirectory = path.c_str();
             executeFf(parsedInput, (char*)newDirectory);
-            cout << "directory path: " << path << endl;
+            //cout << "directory path: " << path << endl;
             //path += '/';            
             path.erase(path.size() - strlen(dp->d_name), path.npos);
         }
