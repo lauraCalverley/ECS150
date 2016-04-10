@@ -292,7 +292,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     const char* newDirectory;
     path += '/';
     //cout << "path being executed next: " << path << endl;
-    printNewLine();
+    //printNewLine();
     const char* output;
     while((dp = readdir(dir)) != NULL){
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
