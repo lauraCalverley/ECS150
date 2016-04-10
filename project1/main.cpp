@@ -295,7 +295,6 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
     cout << "initial path: " << path << endl;
     const char* output;
     while((dp = readdir(dir)) != NULL){
-        cout << !strcmp(dp->d_name, ".") << endl;
         if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
             path += dp->d_name;
             executeFf(parsedInput, dp->d_name);
@@ -305,7 +304,7 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
             output = path.c_str();
             write(STDOUT_FILENO, (char*)output, strlen(output));
             printNewLine();
-            path.erase(path.size() - strlen(dp->d_name), path.npos);
+            //path.erase(path.size() - strlen(dp->d_name), path.npos);
         }
     }
 
