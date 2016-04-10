@@ -298,18 +298,14 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
 	    string path = directory;
 	    const char* newDirectory;
 	    path += '/';
-	    //cout << "path being executed next: " << path << endl;
-	    //printNewLine();
 	    const char* output;
 	    while((dp = readdir(dir)) != NULL){
             if(dp->d_type == DT_DIR && strcmp(dp->d_name,".") && strcmp(dp->d_name, "..")){
                 path += dp->d_name;
-                //cout << "path being executed next: " << path << endl;
                 newDirectory = path.c_str();
                 executeFf(parsedInput, (char*)newDirectory);
-                //cout << "directory path: " << path << endl;
-                //path += '/';
                 path.erase(path.size() - strlen(dp->d_name), path.npos);
+                //cout << "path: " << path << endl;
             }
             else if(!strcmp(parsedInput[0][1], dp->d_name)){
                 path += dp->d_name;
@@ -321,7 +317,6 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
 	    }
 		
     }
-
 }
 
 
@@ -528,19 +523,15 @@ void directCommand(string command) {
     }
     else if (commandType == "pwd") {
         executePwd(parsedInput);
-        //cout << "pwd" << endl;
     }
     else if (commandType == "ff") {
-        //cout << "ff" << endl;
-        //void executeFf(vector<vector<char*> > parsedInput, char* directory){
-        /*if ((parsedInput[0].size() >= 2) && (parsedInput[0][2] != NULL)) {
-            char *directory = ("./" + (string)parsedInput[0][2]).c_str();
+        if (parsedInput[0].size() >= 3) { // user gave directory parameter
+            char *directory = parsedInput[0][2];
             executeFf(parsedInput, directory);
         }
         else {
             executeFf(parsedInput, ".");
-        } */
-        executeFf(parsedInput, ".");
+        }
         printNewLine();
     }
     else if (commandType == "exit") {
