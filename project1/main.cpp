@@ -652,12 +652,17 @@ int main() {
                     read(STDIN_FILENO, &nextChar, 1);
 
                 }
-        directCommand(command);
-        history.push_front(command);
-        if (history.size() > 10) {
-            history.pop_back();
+        if (command!="") {
+            directCommand(command);
+            history.push_front(command);
+            if (history.size() > 10) {
+                history.pop_back();
+            }
+            counter = -1;
         }
-        counter = -1;
+        else {
+            printNewLine();
+        }
 	}
     
     /*for (int i=0; i < history.size(); i++) {
