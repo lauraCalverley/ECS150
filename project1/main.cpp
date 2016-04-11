@@ -17,12 +17,29 @@
 
 using namespace std;
 
-void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
+void SetNonCanonicalMode(int fd, struct termios *savedattributes);
+void ResetCanonicalMode(int fd, struct termios *savedattributes);
+void printNewLine();
+string executeBackspace(string command);
+void executeInvalidCommand(string command);
+void executePwd(vector<vector<char *> > parsedInput);
+void getPerms(string &perms, struct dirent* dp, struct stat statbuf, string path);
+void executeLs(vector<vector<char*> > parsedInput);
+void executeFf(vector<vector<char*> > parsedInput, char* directory);
+void executeCd(vector<vector<char *> > parsedInput);
+void printShellPrompt();
+void parseCommand(string command, vector<vector<char *> > &parameters);
+void directCommand(string command);
+void executeArrows(deque<string> history, string &command, int &counter);
+    
+void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // Source: Nitta noncanonmode.c
     struct termios TermAttributes;
     
     // Make sure stdin is a terminal. 
     if(!isatty(fd)){
-        fprintf (stderr, "Not a terminal.\n");
+        char *errorMessage = "Not a terminal.";
+        write(STDERR_FILENO, errorMessage, strlen(errorMessage));
+        printNewLine();
         exit(0);
     }
     
@@ -37,7 +54,7 @@ void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitt
     tcsetattr(fd, TCSAFLUSH, &TermAttributes);
 }
 
-void ResetCanonicalMode(int fd, struct termios *savedattributes){ // CITE: Nitta
+void ResetCanonicalMode(int fd, struct termios *savedattributes){ // Source: Nitta's noncanonmode.c
     tcsetattr(fd, TCSANOW, savedattributes);
 }
 
@@ -67,131 +84,24 @@ void executeInvalidCommand(string command) {
     printNewLine();
 }
 
-
-
-//currently not used due to return issues: see executePwd
-char** parsePipeCommand(char * command){
-    char* tokens[strlen(command)];
-    char *token;
-    token = strtok(command, " ");
-    int i = 0;
-    
-    while (token != NULL) {
-        tokens[i] = token;
-        token = strtok(NULL, " ");
-        i++;
-    }
-    tokens[i] = NULL;
-    return tokens;
-}
-
-
-
-
-
-
-
 void executePwd(vector<vector<char *> > parsedInput) { // to be forked? yes
     
     char *directoryName = NULL;
     directoryName = getcwd(directoryName, 0);
     printNewLine();
 
-    for(int i = 0; i < parsedInput[1].size(); i++){
-        cout << "parsedInput[1][" << i << "]: "<< parsedInput[1][i] << endl;
-    }
-
-    if (!parsedInput[1].empty()) { //pipe
-        cout << "pipe" << endl;
-        
-        // for now, assume 1 pipe, need to make it work for multiple pipes / FIXME
-        
-        // cite the textbook
-        int fd[2]; // CITE p. 143 of the textbook
-        pid_t pid;
-        int childStatus;
-        char read_msg[strlen(directoryName)];
-
-        //char* args[] = parsePipeCommand(parsedInput[1][1]); //for now this only handles first pipe
-
-        //could not return due to loss of pointers once out of scope of function
-        //could not reference a char** in parameters
-        //so parsePipeCommand() is inline
-        //beginning of parsePipeCommand()
-        char* command = parsedInput[1][0];
-
-        cout << "command: " << command << endl;
-        char commandA[strlen(command) + 1];
-        strcpy(commandA, command);
-
-        char* args[strlen(command)];
-        char *token;
-
-        token = strtok(commandA, " ");
-        int i = 0;
-        while (token != NULL) {
-            args[i] = token;
-            token = strtok(NULL, " ");
-            i++;
-        }
-        args[i] = NULL;
-        //end of parsePipeCommand()
-
-        
-        // create pipe
-        if (pipe(fd) == -1) {
-            cout << "ERROR" << endl;
-        }
-
-        // fork a child process
-        pid = fork();
-
-        // read = 0
-        // write = 1
-        //CITE http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
-        if (pid <0) {
-            cout << "ERROR" << endl;
-        }
-        
-        if (pid == 0) { // child process like grep, cat, etc. AKA ashell
-            cout << __LINE__ << endl;
-            dup2(fd[0], 0);
-            close(fd[0]);
-            close(fd[1]);
-            //read(fd[0], read_msg, strlen(directoryName));
-            cout << __LINE__ << endl;
-            execvp(args[0], args);
-            cout << __LINE__ << endl;
-            //close(fd[0]);
-
-        }
-        
-        else { // parent process  AKA ashell
-            //CITE http://www.cs.ecu.edu/karl/4630/sum01/example1.html
-            wait(&childStatus); //change to waitpid if waiting for one specific child from multiple children
-            cout << __LINE__ << endl;
-            dup2(fd[1], 1);
-            close(fd[0]);
-            close(fd[1]);
-        }
-        //printNewLine(); // is this right??
-    }
-    
-    else if (!parsedInput[3].empty()) { //redirect output
-        cout << "redirect output" << endl;
-        
-        // open a files for output
-
+    if (!parsedInput[3].empty()) { //redirect output
+        // open files for output
         //int flags = O_CREAT | S_IRUSR | S_IWUSR | O_RDWR;
         int outputFD;
         
         for (int i=0; i < parsedInput[3].size(); i++) {
             // create a file for each output vector entry
-            outputFD = open(parsedInput[3][i], O_CREAT, 0777); // returns the new file descriptor // CITE http://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
+            outputFD = open(parsedInput[3][i], O_CREAT, 0777); // returns the new file descriptor // Source: http://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
             close(outputFD);
         }
             
-        // write to final output vector entry
+        // write to final output vector entry file
         //flags = S_IRUSR | S_IWUSR | O_RDWR;
         outputFD = open(parsedInput[3][(parsedInput[3].size() - 1)], O_RDWR, 0777); // returns the new file descriptor
         write(outputFD, directoryName, strlen(directoryName));
@@ -241,7 +151,7 @@ void getPerms(string &perms, struct dirent* dp, struct stat statbuf, string path
 void executeLs(vector<vector<char*> > parsedInput){
     printNewLine();
 
-    // CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/stat.html
+    // Source: http://pubs.opengroup.org/onlinepubs/009695399/functions/stat.html
     DIR * dir; 
     struct dirent *dp; 
     struct stat statbuf;
@@ -260,7 +170,7 @@ void executeLs(vector<vector<char*> > parsedInput){
             makePerms = makePerms + " "; // insert space character between permissions and file name
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms)); 
-            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //Source: http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
             makePerms = "";
         }
@@ -275,7 +185,7 @@ void executeLs(vector<vector<char*> > parsedInput){
             makePerms = makePerms + " "; // insert space character between permissions and file name
             perms = makePerms.c_str();
             write(STDOUT_FILENO, perms, strlen(perms));
-            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //CITE http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
+            write(STDOUT_FILENO, dp->d_name, strlen(dp->d_name)); //Source http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
             printNewLine();
             makePerms = "";
         }
@@ -314,7 +224,6 @@ void executeFf(vector<vector<char*> > parsedInput, char* directory){
                 path.erase(path.size() - strlen(dp->d_name), path.npos);
             }
 	    }
-		
     }
 }
 
@@ -388,20 +297,15 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
         token = strtok(NULL, " ");
     }
     
-    /*for (int i=0; i < tokens.size(); i++) {
-        cout << "tokens[" << i << "] is " << tokens[i] << endl;
-    }*/
-    
     int i = 0;
     char *currentToken;
     while (i < tokens.size()) {
-        //cout << "IN THE WHILE LOOP" << endl;
         if (i < tokens.size()) {
             currentToken = tokens[i];
         }
         if (i == 0) {
             while (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
-                char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+                char* c = new char[strlen(currentToken) + 1]; // Source: http://www.cplusplus.com/forum/beginner/16987/
                 strcpy(c, currentToken);
                 commandVector.push_back(c);
                 i++;
@@ -409,7 +313,6 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
                     currentToken = tokens[i];
                 }
             }
-            //cout << "end of if" << endl;
         }
         else if (!strcmp(currentToken, "|")) {
             temp = "";
@@ -424,10 +327,9 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
                     currentToken = tokens[i];
                 }
             }
-            //temp.pop_back(); //c++11 doesn't compile on CSIF
             temp.erase(temp.end() - 1);
 
-            char* c = new char[temp.length() + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+            char* c = new char[temp.length() + 1]; // Source: http://www.cplusplus.com/forum/beginner/16987/
             strcpy(c, (char*) temp.c_str());
             pipeVector.push_back(c);
         }
@@ -437,12 +339,12 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
                 currentToken = tokens[i];
             }
             if (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
-                char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+                char* c = new char[strlen(currentToken) + 1]; // Source: http://www.cplusplus.com/forum/beginner/16987/
                 strcpy(c, currentToken);
                 inputVector.push_back(c);
             }
             else {
-                // error // FIXME
+                // ERROR
             }
             
             while (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
@@ -458,12 +360,12 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
                 currentToken = tokens[i];
             }
             if (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
-                char* c = new char[strlen(currentToken) + 1]; // CITE http://www.cplusplus.com/forum/beginner/16987/
+                char* c = new char[strlen(currentToken) + 1]; // Source: http://www.cplusplus.com/forum/beginner/16987/
                 strcpy(c, currentToken);
                 outputVector.push_back(c);
             }
             else {
-                // error // FIXME
+                // ERROR
             }
             
             while (strcmp(currentToken, "|") && strcmp(currentToken, "<") && strcmp(currentToken, ">") && (i < tokens.size())) {
@@ -474,28 +376,10 @@ void parseCommand(string command, vector<vector<char *> > &parameters) {
             }
         }
         else {
-            cout << "IN THE ELSE...UH OH" << endl;
+            // ERROR
         }
     }
-    //cout << "OUT OF THE WHILE LOOP" << endl;
 
-    /*if (commandVector.empty()){
-        commandVector.push_back("");
-    }
-    if (pipeVector.empty()){
-        pipeVector.push_back("");
-    }
-    if (inputVector.empty()){
-        inputVector.push_back("");
-    }
-    if (outputVector.empty()){
-        outputVector.push_back("");
-    }*/
-
-    for (int i = 0; i < pipeVector.size(); i++){
-        cout << "pipeVector[" << i << "]: " << pipeVector[i] << endl;
-    }
-    
     parameters.push_back(commandVector);
     parameters.push_back(pipeVector);
     parameters.push_back(inputVector);
@@ -577,7 +461,7 @@ void executeArrows(deque<string> history, string &command, int &counter) {
         }
         else if (nextChar == 0x42) { // down arrow
             counter--;
-            if (counter == -2) { //FIXME: case where the user types, then hits UP, then hits DOWN (enter is never pressed)
+            if (counter == -2) { //update to deal with the case where the user types, then hits UP, then hits DOWN (enter is never pressed)
                 write(STDOUT_FILENO, &audible, 1);
                 counter = -1;
             }
@@ -625,11 +509,11 @@ int main() {
                             command = executeBackspace(command); // returns command to remove last char from command string
                             break;
                         }
-                        case 0x1B: { // escape character // FIXME need prompt for history items
+                        case 0x1B: { //escape character
                             executeArrows(history, command, counter);
                             break;
                         }
-                        default: { // input chars
+                        default: { //input chars
                             write(STDOUT_FILENO, &nextChar, 1);
                             command += nextChar;
                             break;
@@ -652,76 +536,7 @@ int main() {
         }
 	}
     
-    /*for (int i=0; i < history.size(); i++) {
-        cout << history[i] << endl;
-    }*/
-    
 	ResetCanonicalMode(STDIN_FILENO, &SavedTermAttributes);
     
         return 1;
 }
-
-/*int main() {
-    string mystring;
-    vector<vector<char *> > parameters;
-    //cin >> mystring;
-    mystring = "cd";
-    parseCommand(mystring, parameters);
-    
-    for (int i=0; i < parameters.size(); i++) {
-        for (int j=0; j < parameters[i].size(); j++) {
-            cout << "parameters[" << i << "][" << j << "] is " << parameters[i][j] << endl;
-        }
-        cout << endl;
-    }
-    
-}*/
-
-
-/* TO DO
- get input redirection working - try hard coding a fake file name!
- get output redirection working
- fill out time slots csv
- execute other apps like grep, cat, etc. (execvp???)
- get piping working
- add forking to pwd
- ls
- 
- ff
- complete the README
- write the makefile
-
- fix the space case: see > output vs >output
- deal with file/directory names that include a space or other escaped characters
-*/
-
-
-//References:
-//  Nitta noncanmode.c
-// http://www.ascii-code.com/
-// http://www.cplusplus.com/forum/beginner/16987/
-// cat temp.c > test2.txt
-// http://www.cs.ecu.edu/karl/4630/sum01/example1.html
-// http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
-// http://pubs.opengroup.org/onlinepubs/009695399/functions/opendir.html
-// http://pubs.opengroup.org/onlinepubs/009695399/functions/readdir.html
-
-
-//LAURA Did
-//  created parsePipeCommand function which parses 1 pipe command
-//  worked on pipe and fork
-//  currently outputing broken pipe and I don't know why
-
-
-//Potentially helpful piazza
- // @142
- // @201 We need to use dup2 for in and out redirects
- // @208 We need to have 1 child for each command (including pwd, ls, etc..)
-
-
-//things to test (no internet)
-//  ls with parameters
-
-//things to do
-//  first character of ls
-//  fix the different set of permissions given when called at different levels in ls
