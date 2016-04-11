@@ -1,6 +1,8 @@
 Laura Calverley 913328989
 Katherine Burckin 998828844
 
+Please run our program with “project1” (the executable created by “make”). 
+
 Sources:
 Nitta's noncanonmode.c
 http://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
