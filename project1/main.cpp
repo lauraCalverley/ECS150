@@ -37,7 +37,7 @@ void SetNonCanonicalMode(int fd, struct termios *savedattributes){ // Source: Ni
     
     // Make sure stdin is a terminal. 
     if(!isatty(fd)){
-        char *errorMessage = "Not a terminal.";
+        char *errorMessage = (char *)"Not a terminal.";
         write(STDERR_FILENO, errorMessage, strlen(errorMessage));
         printNewLine();
         exit(0);
@@ -65,7 +65,7 @@ void printNewLine() {
 
 string executeBackspace(string command) {
     if (command != "") {
-        char *temp = "\b \b";
+        char *temp = (char *)"\b \b";
         write(STDOUT_FILENO, temp, strlen(temp));
         command = command.substr(0,(command.length()-1));
     }
@@ -78,7 +78,7 @@ string executeBackspace(string command) {
 
 void executeInvalidCommand(string command) {
     printNewLine();
-    char *temp = "Failed to execute ";
+    char *temp = (char *)"Failed to execute ";
     write(STDOUT_FILENO, temp, strlen(temp));
     write(STDOUT_FILENO, command.c_str(), strlen(command.c_str()));
     printNewLine();
@@ -196,7 +196,7 @@ void executeLs(vector<vector<char*> > parsedInput){
 
 void executeFf(vector<vector<char*> > parsedInput, char* directory){
     if (parsedInput[0].size() == 1) {
-        char *errorMessage = "ff command requires a filename!";
+        char *errorMessage = (char *)"ff command requires a filename!";
         printNewLine();
         write(STDOUT_FILENO, errorMessage, strlen(errorMessage));
     }
@@ -243,7 +243,7 @@ void executeCd(vector<vector<char *> > parsedInput) {
     int success = chdir(directoryName);
         
     if (success == -1) {
-        char *errorMessage = "Error changing directory.";
+        char *errorMessage = (char *)"Error changing directory.";
         write(STDOUT_FILENO, errorMessage, strlen(errorMessage));
         printNewLine();
     }
@@ -257,7 +257,7 @@ void printShellPrompt() {
     char *currentDirectory = new char [strlen(path)+1];
     
     if (strlen(path) > 16) {
-        temp = "/.../";
+        temp = (char *)"/.../";
         write(STDOUT_FILENO, temp, strlen(temp));
         
         temp = strtok(path, "/");
@@ -275,7 +275,7 @@ void printShellPrompt() {
         write(STDOUT_FILENO, path, strlen(path));
     }
     
-    temp = "% ";
+    temp = (char *)"% ";
     write(STDOUT_FILENO, temp, strlen(temp));
 }
 
@@ -410,7 +410,7 @@ void directCommand(string command) {
             executeFf(parsedInput, directory);
         }
         else {
-            executeFf(parsedInput, ".");
+            executeFf(parsedInput, (char *)".");
         }
         printNewLine();
     }
@@ -449,7 +449,7 @@ void executeArrows(deque<string> history, string &command, int &counter) {
                 // erase current user input
                 int previousCommandLength = command.length();
                 for (int i=0; i < previousCommandLength; i++) {
-                    char *temp = "\b \b";
+                    char *temp = (char *)"\b \b";
                     write(STDOUT_FILENO, temp, strlen(temp));
                 }
                 
@@ -469,7 +469,7 @@ void executeArrows(deque<string> history, string &command, int &counter) {
                 // erase current user input
                 int previousCommandLength = command.length();
                 for (int i=0; i < previousCommandLength; i++) {
-                    char *temp = "\b \b";
+                    char *temp = (char *)"\b \b";
                     write(STDOUT_FILENO, temp, strlen(temp));
                 }
                 if (counter == -1) {
