@@ -1,15 +1,26 @@
-#include "VirtualMachine.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream> // temp?
 
+#include "VirtualMachine.h"
+#include "Machine.h"
+
 extern "C" {
-using namespace std;
+    using namespace std;
+    
+    volatile int SLEEPCOUNT = 0;
 
     TVMMainEntry VMLoadModule(const char *module);
-
+    TMachineAlarmCallback callback(void);
     
     TVMStatus VMStart(int tickms, int argc, char *argv[]) {
+        MachineInitialize();
+        
+        //TMachineAlarmCallback (*callbackFunctionPointer)();
+        //callbackFunctionPointer = &callback;
+        //TMachineAlarmCallback callbackFunctionPointer = &callback();
+        //MachineRequestAlarm(100*1000, callbackFunctionPointer, NULL); // 2nd arg is a function pointer
+
         TVMMainEntry module = VMLoadModule(argv[0]);
         if (module == NULL) {
             return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
@@ -20,6 +31,11 @@ using namespace std;
         }
     }
     
+    TMachineAlarmCallback callback(void) {
+            SLEEPCOUNT--;
+        // default tick time is 100ms
+    }
+    
     
     TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
 
@@ -28,7 +44,7 @@ using namespace std;
         }
         
         int writeStatus;
-        writeStatus = write(filedescriptor, data, *length); // FIXME - temporary solution
+        writeStatus = write(filedescriptor, data, *length); // FIXME - temporary solution // eventually use MachineFileWrite
         if (writeStatus < 0) {
             return VM_STATUS_FAILURE;
         }
@@ -49,8 +65,15 @@ using namespace std;
         }
         else {
             // puts the currently running thread to sleep for tick ticks
-            //MachineRequestAlarm(tick, TMachineAlarmCallback callback, void *calldata);
             // Upon successful sleep of the currently running thread, VMThreadSleep() returns VM_STATUS_SUCCESS.
+            
+            SLEEPCOUNT = tick; // set global
+            
+            while (SLEEPCOUNT != 0) {}
+
+            if (SLEEPCOUNT == 0) {
+                return VM_STATUS_SUCCESS;
+            }
             
         }
     }
