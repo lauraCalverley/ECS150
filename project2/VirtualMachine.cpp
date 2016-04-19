@@ -12,6 +12,7 @@ extern "C" {
 
     TVMMainEntry VMLoadModule(const char *module);
     void callbackMachineRequestAlarm(void *calldata);
+    void callbackMachineFileOpen(void *calldata, int result);
     
     // The following are defined in VirtualMachineUtils.c:
     // TVMMainEntry VMLoadModule(const char *module)
@@ -75,6 +76,52 @@ extern "C" {
     
     
     // VMFileOpen
+    
+    TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
+        
+        // VMFileOpen() attempts to open the file specified by filename, using the flags specified by flags parameter, and mode specified by mode parameter. The file descriptor of the newly opened file will be placed in the location specified by filedescriptor. The flags and mode values follow the same format as that of open system call. The filedescriptor returned can be used in subsequent calls to VMFileClose(), VMFileRead(), VMFileWrite(), and VMFileSeek(). When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
+        
+        // Upon successful opening of the file, VMFileOpen() returns VM_STATUS_SUCCESS, upon failure VMFileOpen() returns VM_STATUS_FAILURE.
+        
+        if ((filename==NULL) || (filedescriptor==NULL)) {
+            return VM_STATUS_ERROR_INVALID_PARAMETER;
+        }
+        
+        cout << "filedescriptor BEFORE" << *filedescriptor << endl;
+        MachineFileOpen(filename, flags, mode, callbackMachineFileOpen, filedescriptor); // FIXME - the parameters for call back are wrong...callbackMachineFileOpen isn't ever called
+        cout << "filedescriptor AFTER" << *filedescriptor << endl;
+        
+        // When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
+
+        
+    }
+    
+    void callbackMachineFileOpen(void *calldata, int result) {
+        // result is the File Descriptor, which is the result of MachineFileOpen
+     
+        cout << "in callback" << endl;
+        cout << "result/FD is " << result << endl;
+        *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
+        
+        // The file descriptor of the newly opened file will be placed in the location specified by filedescriptor
+    }
+    
+/* temp changes to sleep.c
+#include "VirtualMachine.h"
+#include <fcntl.h>
+    
+    void VMMain(int argc, char *argv[]){
+        int FileDescriptor;
+        
+        VMPrint("Going to sleep for 10 ticks\n");
+        //VMThreadSleep(10);
+        VMFileOpen("test.txt", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
+        VMPrint("Awake\nGoodbye\n");
+    }
+
+ */
+
+    
     // VMFileSeek
     // VMFileRead
     // VM FileClose
