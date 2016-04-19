@@ -11,12 +11,18 @@ extern "C" {
     volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
 
     TVMMainEntry VMLoadModule(const char *module);
-    void callback(void *calldata);
+    void callbackMachineRequestAlarm(void *calldata);
+    
+    // The following are defined in VirtualMachineUtils.c:
+    // TVMMainEntry VMLoadModule(const char *module)
+    // void VMUnloadModule(void)
+    // TVMStatus VMFilePrint(int filedescriptor, const char *format, ...)
+
     
     TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         MachineInitialize();
         
-        MachineRequestAlarm(100*1000, callback, NULL); // 2nd arg is a function pointer
+        MachineRequestAlarm(100*1000, callbackMachineRequestAlarm, NULL); // 2nd arg is a function pointer
 
         TVMMainEntry module = VMLoadModule(argv[0]);
         if (module == NULL) {
@@ -28,7 +34,7 @@ extern "C" {
         }
     }
     
-    void callback(void *calldata) {
+    void callbackMachineRequestAlarm(void *calldata) {
         SLEEPCOUNT--;
     }
     
@@ -60,18 +66,22 @@ extern "C" {
             return VM_STATUS_SUCCESS;
         }
         else {
-            // puts the currently running thread to sleep for tick ticks
-            // Upon successful sleep of the currently running thread, VMThreadSleep() returns VM_STATUS_SUCCESS.
-
             SLEEPCOUNT = tick; // set global
             while (SLEEPCOUNT != 0) {}
-
-            if (SLEEPCOUNT == 0) {
-                return VM_STATUS_SUCCESS;
-            }
-            
+            return VM_STATUS_SUCCESS;
         }
     }
+    
+    
+    
+    // VMFileOpen
+    // VMFileSeek
+    // VMFileRead
+    // VM FileClose
+    
+    
+    
+    
 }
 
 
