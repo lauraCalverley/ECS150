@@ -8,18 +8,15 @@
 extern "C" {
     using namespace std;
     
-    volatile int SLEEPCOUNT = 0;
+    volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
 
     TVMMainEntry VMLoadModule(const char *module);
-    TMachineAlarmCallback callback(void);
+    void callback(void *calldata);
     
     TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         MachineInitialize();
         
-        //TMachineAlarmCallback (*callbackFunctionPointer)();
-        //callbackFunctionPointer = &callback;
-        //TMachineAlarmCallback callbackFunctionPointer = &callback();
-        //MachineRequestAlarm(100*1000, callbackFunctionPointer, NULL); // 2nd arg is a function pointer
+        MachineRequestAlarm(100*1000, callback, NULL); // 2nd arg is a function pointer
 
         TVMMainEntry module = VMLoadModule(argv[0]);
         if (module == NULL) {
@@ -31,9 +28,8 @@ extern "C" {
         }
     }
     
-    TMachineAlarmCallback callback(void) {
-            SLEEPCOUNT--;
-        // default tick time is 100ms
+    void callback(void *calldata) {
+        SLEEPCOUNT--;
     }
     
     
@@ -58,7 +54,7 @@ extern "C" {
         if (tick == VM_TIMEOUT_INFINITE) {
             return VM_STATUS_ERROR_INVALID_PARAMETER;
         }
-        else if (tick = VM_TIMEOUT_IMMEDIATE) {
+        else if (tick == VM_TIMEOUT_IMMEDIATE) {
             // FIXME? No idea if this is right
             // If tick is specified as VM_TIMEOUT_IMMEDIATE the current process yields the remainder of its processing quantum to the next ready process of equal priority.
             return VM_STATUS_SUCCESS;
@@ -66,9 +62,8 @@ extern "C" {
         else {
             // puts the currently running thread to sleep for tick ticks
             // Upon successful sleep of the currently running thread, VMThreadSleep() returns VM_STATUS_SUCCESS.
-            
+
             SLEEPCOUNT = tick; // set global
-            
             while (SLEEPCOUNT != 0) {}
 
             if (SLEEPCOUNT == 0) {
@@ -77,7 +72,18 @@ extern "C" {
             
         }
     }
-    
-
-    
 }
+
+
+
+/*
+ Helpful things:
+ ps aux | grep vm
+ kill -9 <process_id>
+ */
+
+/*
+ Pseudocode for Scheduling Algorithm
+ 
+ 
+*/
