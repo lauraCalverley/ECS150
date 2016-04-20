@@ -9,6 +9,7 @@ extern "C" {
     using namespace std;
     
     volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
+    volatile int MACHINE_FILE_OPEN_STATUS = 0;
 
     TVMMainEntry VMLoadModule(const char *module);
     void callbackMachineRequestAlarm(void *calldata);
@@ -87,40 +88,22 @@ extern "C" {
             return VM_STATUS_ERROR_INVALID_PARAMETER;
         }
         
-        cout << "filedescriptor BEFORE" << *filedescriptor << endl;
-        MachineFileOpen(filename, flags, mode, callbackMachineFileOpen, filedescriptor); // FIXME - the parameters for call back are wrong...callbackMachineFileOpen isn't ever called
-        cout << "filedescriptor AFTER" << *filedescriptor << endl;
+        MachineFileOpen(filename, flags, mode, callbackMachineFileOpen, filedescriptor);
         
-        // When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
+        while (MACHINE_FILE_OPEN_STATUS != 1) {}
+        
+        
+        // FIXME When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
 
         
     }
     
     void callbackMachineFileOpen(void *calldata, int result) {
         // result is the File Descriptor, which is the result of MachineFileOpen
-     
-        cout << "in callback" << endl;
-        cout << "result/FD is " << result << endl;
         *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
-        
-        // The file descriptor of the newly opened file will be placed in the location specified by filedescriptor
+        MACHINE_FILE_OPEN_STATUS = 1;
     }
     
-/* temp changes to sleep.c
-#include "VirtualMachine.h"
-#include <fcntl.h>
-    
-    void VMMain(int argc, char *argv[]){
-        int FileDescriptor;
-        
-        VMPrint("Going to sleep for 10 ticks\n");
-        //VMThreadSleep(10);
-        VMFileOpen("test.txt", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
-        VMPrint("Awake\nGoodbye\n");
-    }
-
- */
-
     
     // VMFileSeek
     // VMFileRead
