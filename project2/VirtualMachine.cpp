@@ -10,10 +10,12 @@ extern "C" {
     
     volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
     volatile int MACHINE_FILE_OPEN_STATUS = 0;
+    volatile int MACHINE_FILE_SEEK_STATUS = 0;
 
     TVMMainEntry VMLoadModule(const char *module);
     void callbackMachineRequestAlarm(void *calldata);
     void callbackMachineFileOpen(void *calldata, int result);
+    void callbackMachineFileSeek(void *calldata, int result);
     
     // The following are defined in VirtualMachineUtils.c:
     // TVMMainEntry VMLoadModule(const char *module)
@@ -80,22 +82,21 @@ extern "C" {
     
     TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
         
-        // VMFileOpen() attempts to open the file specified by filename, using the flags specified by flags parameter, and mode specified by mode parameter. The file descriptor of the newly opened file will be placed in the location specified by filedescriptor. The flags and mode values follow the same format as that of open system call. The filedescriptor returned can be used in subsequent calls to VMFileClose(), VMFileRead(), VMFileWrite(), and VMFileSeek(). When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
-        
-        // Upon successful opening of the file, VMFileOpen() returns VM_STATUS_SUCCESS, upon failure VMFileOpen() returns VM_STATUS_FAILURE.
-        
         if ((filename==NULL) || (filedescriptor==NULL)) {
             return VM_STATUS_ERROR_INVALID_PARAMETER;
         }
         
         MachineFileOpen(filename, flags, mode, callbackMachineFileOpen, filedescriptor);
         
-        while (MACHINE_FILE_OPEN_STATUS != 1) {}
-        
-        
-        // FIXME When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
+        while (MACHINE_FILE_OPEN_STATUS != 1) {} // FIXME Multi When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
+        MACHINE_FILE_OPEN_STATUS = 0; // reset
 
-        
+        if (*filedescriptor < 0) {
+            return VM_STATUS_FAILURE;
+        }
+        else {
+            return VM_STATUS_SUCCESS;
+        }
     }
     
     void callbackMachineFileOpen(void *calldata, int result) {
@@ -106,8 +107,41 @@ extern "C" {
     
     
     // VMFileSeek
+    
+    TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset) {
+        
+        MachineFileSeek(filedescriptor, offset, whence, callbackMachineFileSeek, newoffset);
+        
+        while (MACHINE_FILE_SEEK_STATUS != 1) {} // FIXME Multi When a thread calls VMFileSeek() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful seeking in the file is completed.
+        MACHINE_FILE_SEEK_STATUS = 0; // reset
+        
+        if (*newoffset < 0) {
+            return VM_STATUS_FAILURE;
+        }
+        else {
+            return VM_STATUS_SUCCESS;
+        }
+    }
+    
+    void callbackMachineFileSeek(void *calldata, int result) {
+        // result is the File Descriptor, which is the result of MachineFileOpen
+        *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
+        MACHINE_FILE_SEEK_STATUS = 1;
+    }
+
+    
     // VMFileRead
-    // VM FileClose
+    TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
+        
+        /*
+         VMFileRead() attempts to read the number of bytes specified in the integer referenced by length into the location specified by data from the file specified by filedescriptor. The filedescriptor should have been obtained by a previous call to VMFileOpen(). The actual number of bytes transferred by the read will be updated in the length location. When a thread calls VMFileRead() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful reading of the file is completed.
+         */
+        
+        
+    }
+    
+    
+    // VMFileClose
     
     
     
