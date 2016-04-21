@@ -4,6 +4,7 @@
 
 #include "VirtualMachine.h"
 #include "Machine.h"
+#include "TCB.h"
 
 extern "C" {
 using namespace std;
@@ -39,6 +40,9 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
     }
     else {
+        //TVMThreadID VMMainThreadID;
+        //VMThreadCreate(module, NULL, 0x100000, VM_THREAD_PRIORITY_NORMAL, &VMMainThreadID);
+        //VMThreadActivate(VMMainThreadID);
         module(argc, argv);
         return VM_STATUS_SUCCESS;
     }
@@ -183,6 +187,57 @@ void callbackMachineFileClose(void *calldata, int result) {
     *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
     MACHINE_FILE_CLOSE_STATUS = 1;
 }
+
+
+
+TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
+
+    /*
+     VMThreadCreate() creates a thread in the virtual machine.
+     Once created the thread is in the dead state VM_THREAD_STATE_DEAD.
+     The entry parameter specifies the function of the thread - i.e. it is a function pointer to a function that the thread is going to run?
+     param specifies the parameter that is passed to the function referred to by entry
+     
+     The size of the threads stack is specified by memsize - how much space on the stack this thread gets? we don't decide this, the app does
+     the priority is specified by prio --> a TVMThreadPriority value
+     The thread identifier is PUT into the location specified by the tid parameter...as in we put it there?
+     
+     Return Value
+     Upon successful creation of the thread VMThreadCreate() returns VM_STATUS_SUCCESS.
+     */
+    
+    // VMThreadCreate() returns VM_STATUS_ERROR_INVALID_PARAMETER if either entry or tid is NULL.
+    if ((entry==NULL) || (tid==NULL)) {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+
+    TCB thread(entry, prio);
+    
+    
+    // void MachineContextCreate(SMachineContextRef mcntxref, void (*entry)(void *), void *param, void *stackaddr, size_t stacksize);
+    // #define MachineContextSwitch(mcntxold,mcntxnew)    \
+    if(setjmp((mcntxold)->DJumpBuffer) == 0) longjmp((mcntxnew)->DJumpBuffer, 1)
+
+    
+    
+}
+
+
+/*TVMStatus VMThreadDelete(TVMThreadID thread);
+TVMStatus VMThreadActivate(TVMThreadID thread);
+TVMStatus VMThreadTerminate(TVMThreadID thread);
+TVMStatus VMThreadID(TVMThreadIDRef threadref);
+TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref);
+TVMStatus VMThreadSleep(TVMTick tick);
+
+TVMStatus VMMutexCreate(TVMMutexIDRef mutexref);
+TVMStatus VMMutexDelete(TVMMutexID mutex);
+TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref);
+TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout);
+TVMStatus VMMutexRelease(TVMMutexID mutex);
+*/
+    
+    
 
 
 }
