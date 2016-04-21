@@ -25,8 +25,8 @@ void VMMain(int argc, char *argv[]){
         Buffer[Length] = '\0';
         VMPrint("VMMain read in \"%s\"\n", Buffer);
     }
-    VMPrint("VMMain closing file\n");
-    VMFileClose(FileDescriptor);
+    //VMPrint("VMMain closing file\n");
+    //VMFileClose(FileDescriptor);
     VMPrint("Goodbye\n");    
 }
 
