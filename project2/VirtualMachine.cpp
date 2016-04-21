@@ -13,6 +13,7 @@ extern "C" {
     volatile int MACHINE_FILE_SEEK_STATUS = 0;
     volatile int MACHINE_FILE_READ_STATUS = 0;
     volatile int MACHINE_FILE_WRITE_STATUS = 0;
+    volatile int MACHINE_FILE_CLOSE_STATUS = 0;
 
     TVMMainEntry VMLoadModule(const char *module);
     void callbackMachineRequestAlarm(void *calldata);
@@ -20,6 +21,7 @@ extern "C" {
     void callbackMachineFileSeek(void *calldata, int result);
     void callbackMachineFileRead(void *calldata, int result);
     void callbackMachineFileWrite(void *calldata, int result);
+    void callbackMachineFileClose(void *calldata, int result);
     
     // The following are defined in VirtualMachineUtils.c:
     // TVMMainEntry VMLoadModule(const char *module)
@@ -91,10 +93,6 @@ extern "C" {
         }
     }
     
-    
-    
-    // VMFileOpen
-    
     TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
         
         if ((filename==NULL) || (filedescriptor==NULL)) {
@@ -120,8 +118,6 @@ extern "C" {
     }
     
     
-    // VMFileSeek
-    
     TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset) {
         
         MachineFileSeek(filedescriptor, offset, whence, callbackMachineFileSeek, newoffset);
@@ -141,9 +137,7 @@ extern "C" {
         *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
         MACHINE_FILE_SEEK_STATUS = 1;
     }
-
     
-    // VMFileRead
     TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         if ((data==NULL) || (length==NULL)) {
             return VM_STATUS_ERROR_INVALID_PARAMETER;
@@ -152,7 +146,6 @@ extern "C" {
         MachineFileRead(filedescriptor, data, *length, callbackMachineFileRead, length);
         
         while (MACHINE_FILE_READ_STATUS != 1) {} // FIXME Multi When a thread calls VMFileRead() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful reading of the file is completed.
-
         MACHINE_FILE_READ_STATUS = 0; // reset
         
         if (*length < 0) {
@@ -168,9 +161,28 @@ extern "C" {
         MACHINE_FILE_READ_STATUS = 1;
     }
     
-    // VMFileClose
+    TVMStatus VMFileClose(int filedescriptor) {
+        int status = -1; // 0 is success, < 0 is failure
+        MachineFileClose(filedescriptor, callbackMachineFileClose, &status);
+
+        while (MACHINE_FILE_CLOSE_STATUS != 1) {} // FIXME Multi When a thread calls VMFileClose() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful closing of the file is completed.
+
+        MACHINE_FILE_CLOSE_STATUS = 0; // reset
+        
+        //if (*status < 0) {
+        if (status < 0) {
+            return VM_STATUS_FAILURE;
+        }
+        else {
+            return VM_STATUS_SUCCESS;
+        }
+    }
     
-    
+    void callbackMachineFileClose(void *calldata, int result) {
+
+        *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
+        MACHINE_FILE_CLOSE_STATUS = 1;
+    }
     
     
 }
