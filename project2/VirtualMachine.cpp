@@ -10,6 +10,8 @@
 extern "C" {
 using namespace std;
 
+#define VM_THREAD_PRIORITY_IDLE                  ((TVMThreadPriority)0x00)
+
 TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
 
@@ -21,6 +23,9 @@ volatile int MACHINE_FILE_WRITE_STATUS = 0;
 volatile int MACHINE_FILE_CLOSE_STATUS = 0;
 
 TVMMainEntry VMLoadModule(const char *module);
+
+void idle(void* x);
+
 void callbackMachineRequestAlarm(void *calldata);
 void callbackMachineFileOpen(void *calldata, int result);
 void callbackMachineFileSeek(void *calldata, int result);
@@ -48,13 +53,20 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         //VMThreadCreate(module, NULL, 0x100000, VM_THREAD_PRIORITY_NORMAL, &VMMainThreadID);
         //VMThreadActivate(VMMainThreadID);
         SMachineContextRef mcntxrefMain;
-        TVMThreadIDRef tid = NULL;
-        TCB main(tid, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);       
+        TVMThreadIDRef mainTID = NULL;
+        TCB main(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);       
+
+        TVMThreadIDRef idleTID = NULL;
+		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID);
 
         threadVector.push_back(&main);
         module(argc, argv);
         return VM_STATUS_SUCCESS;
     }
+}
+
+void idle(void* x)  {
+	while (true) {}
 }
 
 void callbackMachineRequestAlarm(void *calldata) {
@@ -214,11 +226,20 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
     
 }
 
+TVMStatus VMThreadID(TVMThreadIDRef threadref) {
+	threadref = &CURRENT_THREAD;
+	if (threadref == NULL) {
+		return VM_STATUS_ERROR_INVALID_PARAMETER;
+	}
+	else {
+		return VM_STATUS_SUCCESS;
+	}
+}
+
 
 /*TVMStatus VMThreadDelete(TVMThreadID thread);
 TVMStatus VMThreadActivate(TVMThreadID thread);
 TVMStatus VMThreadTerminate(TVMThreadID thread);
-TVMStatus VMThreadID(TVMThreadIDRef threadref);
 TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref);
 TVMStatus VMThreadSleep(TVMTick tick);
 
