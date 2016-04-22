@@ -4,32 +4,49 @@
 #include "VirtualMachine.h"
 
 class TCB {
-    unsigned int threadID;
-    int *stackPointer; // FIXME change to an actual stack???
-
-    TVMThreadEntry entry; // function // do we need the parameters
+    TVMThreadID threadID;
+    
+    char *stackPointer;
+	TVMMemorySize stackSize; // FIXME??? should it be of size_t???
+   
     TVMThreadState state;
     TVMThreadPriority priority;
     
+    TVMThreadEntry entry;
+	void *params;
+    
+    SMachineContextRef context;// this is a pointer
     
 public:
     
     volatile int SleepCount; // public?
+    volatile int callbackStatus; // 0 is waiting, 1 is operation done
     static int threadCount;
 
-    TCB(TVMThreadEntry e, TVMThreadPriority p) { // FIXME stack pointer/size???
-        entry = e;
-        priority = p;
-        state = VM_THREAD_STATE_DEAD;
-
+    TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c) {
+        
+        threadID = threadCount;
+        *tid = threadID; // FIXME???
         threadCount++;
+
+        stackPointer = stackP;
+        stackSize = stackS;
+        
+        state = s;
+        priority = p;
+        
+        entry = e;
+        params = entryParams;
+        
+        context = c;
+        
     }
     
     
-    unsigned int getThreadID() {
+    TVMThreadID getThreadID() {
         return threadID;
     }
-    void setThreadID(unsigned int id) {
+    void setThreadID(TVMThreadID id) {
         threadID = id;
     }
     

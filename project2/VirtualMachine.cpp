@@ -5,9 +5,13 @@
 #include "VirtualMachine.h"
 #include "Machine.h"
 #include "TCB.h"
+#include <vector>
 
 extern "C" {
 using namespace std;
+
+TVMThreadID CURRENT_THREAD = 0;
+vector<TCB*> threadVector;
 
 volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
 volatile int MACHINE_FILE_OPEN_STATUS = 0;
@@ -43,6 +47,11 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         //TVMThreadID VMMainThreadID;
         //VMThreadCreate(module, NULL, 0x100000, VM_THREAD_PRIORITY_NORMAL, &VMMainThreadID);
         //VMThreadActivate(VMMainThreadID);
+        SMachineContextRef mcntxrefMain;
+        TVMThreadIDRef tid = NULL;
+        TCB main(tid, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);       
+
+        threadVector.push_back(&main);
         module(argc, argv);
         return VM_STATUS_SUCCESS;
     }
@@ -188,37 +197,20 @@ void callbackMachineFileClose(void *calldata, int result) {
     MACHINE_FILE_CLOSE_STATUS = 1;
 }
 
-
-
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
 
-    /*
-     VMThreadCreate() creates a thread in the virtual machine.
-     Once created the thread is in the dead state VM_THREAD_STATE_DEAD.
-     The entry parameter specifies the function of the thread - i.e. it is a function pointer to a function that the thread is going to run?
-     param specifies the parameter that is passed to the function referred to by entry
-     
-     The size of the threads stack is specified by memsize - how much space on the stack this thread gets? we don't decide this, the app does
-     the priority is specified by prio --> a TVMThreadPriority value
-     The thread identifier is PUT into the location specified by the tid parameter...as in we put it there?
-     
-     Return Value
-     Upon successful creation of the thread VMThreadCreate() returns VM_STATUS_SUCCESS.
-     */
-    
-    // VMThreadCreate() returns VM_STATUS_ERROR_INVALID_PARAMETER if either entry or tid is NULL.
     if ((entry==NULL) || (tid==NULL)) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
-    TCB thread(entry, prio);
-    
-    
-    // void MachineContextCreate(SMachineContextRef mcntxref, void (*entry)(void *), void *param, void *stackaddr, size_t stacksize);
-    // #define MachineContextSwitch(mcntxold,mcntxnew)    \
-    if(setjmp((mcntxold)->DJumpBuffer) == 0) longjmp((mcntxnew)->DJumpBuffer, 1)
-
-    
+	char *stackPointer = new char[memsize];
+	SMachineContextRef mcntxref;
+	tid = NULL;
+	MachineContextCreate(mcntxref, entry, param, stackPointer, memsize);
+	TCB thread(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
+	threadVector.push_back(&thread);
+	
+	return VM_STATUS_SUCCESS;
     
 }
 
@@ -237,21 +229,38 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout);
 TVMStatus VMMutexRelease(TVMMutexID mutex);
 */
     
-    
+/*void entrySkeleton(TVMThreadEntry entry, void *params) { // FIXME???
+	entry(params);
+	VMThreadTerminate(CURRENT_THREAD);
+}*/
+
+
+void Scheduler() {
+	
+/*
+ Pseudocode for Scheduling Algorithm
+ 
+ So you call the machine function, your current thread blocks, and you switch to the next ready thread.
+ * Once this other thread gets your callback, you will put the thread that was blocking in the ready state, and then check if its priority is higher than the current running thread.  if it is, then you switch threads. if its not then it stays in the ready state.
+ 
+*/
 
 
 }
 
-
+   
 
 /*
  Helpful things:
  ps aux | grep vm
  kill -9 <process_id>
+ * 
+ *  // @567 @630 @676 @716
+    
+    //  Christopher Nitta: You may not need to use MachineContextSave or MachineContextRestore.
+    // The MachineContextSwitch will probably be what you will want to use. It saves the existing context and restores the new one. 
+
  */
 
-/*
- Pseudocode for Scheduling Algorithm
- 
- 
-*/
+
+}
