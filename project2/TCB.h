@@ -2,6 +2,7 @@
 #define TCB_HEADER
 
 #include "VirtualMachine.h"
+#include "Machine.h"
 
 class TCB {
     TVMThreadID threadID;
@@ -16,6 +17,8 @@ class TCB {
 	void *params;
     
     SMachineContextRef context;// this is a pointer
+    
+    int deleted;
     
 public:
     
@@ -40,6 +43,7 @@ public:
         
         context = c;
         
+        deleted = 0;
     }
     
     
@@ -75,6 +79,23 @@ public:
     }
 
     
+    int getDeleted() {
+        return deleted;
+    }
+    void setDeleted(int i = 1) { // should only be used to mark as deleted because once deleted, would no longer access
+        deleted = i;
+    }
+
+    
+    friend bool operator<(const TCB& lhs, const TCB& rhs)
+    {
+        if (lhs.priority < rhs.priority) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    }
     
 };
 

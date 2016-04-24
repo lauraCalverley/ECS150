@@ -6,6 +6,7 @@
 #include "Machine.h"
 #include "TCB.h"
 #include <vector>
+#include <queue>
 
 extern "C" {
 using namespace std;
@@ -14,6 +15,7 @@ using namespace std;
 
 TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
+priority_queue<TCB*> readyQueue;
 
 volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
 volatile int MACHINE_FILE_OPEN_STATUS = 0;
@@ -33,6 +35,8 @@ void callbackMachineFileRead(void *calldata, int result);
 void callbackMachineFileWrite(void *calldata, int result);
 void callbackMachineFileClose(void *calldata, int result);
 
+bool threadExists(TVMThreadID thread);
+    
 // The following are defined in VirtualMachineUtils.c:
 // TVMMainEntry VMLoadModule(const char *module)
 // void VMUnloadModule(void)
@@ -61,6 +65,11 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
 
         threadVector.push_back(&main);
         module(argc, argv);
+        
+        // activate and run idle thread
+        
+        // switch back to main thread
+        
         return VM_STATUS_SUCCESS;
     }
 }
@@ -236,11 +245,79 @@ TVMStatus VMThreadID(TVMThreadIDRef threadref) {
 	}
 }
 
+TVMStatus VMThreadDelete(TVMThreadID thread) {
+    if (!threadExists(thread)) {
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+    else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
+        return VM_STATUS_ERROR_INVALID_STATE;
+    }
+    else {
+        threadVector[thread]->setDeleted();
+        return VM_STATUS_SUCCESS;
+    }
+}
+    
+TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref) {
+    if (!threadExists(thread)) {
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+    TVMThreadState state = threadVector[thread]->getTVMThreadState();
+    stateref = &state;
+    if (stateref == NULL) {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        return VM_STATUS_SUCCESS;
+    }
+}
 
-/*TVMStatus VMThreadDelete(TVMThreadID thread);
-TVMStatus VMThreadActivate(TVMThreadID thread);
-TVMStatus VMThreadTerminate(TVMThreadID thread);
-TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref);
+TVMStatus VMThreadActivate(TVMThreadID thread) {
+    if (!threadExists(thread)) {
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+    else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
+        return VM_STATUS_ERROR_INVALID_STATE;
+    }
+    else {
+        threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
+        readyQueue.push(threadVector[thread]);
+        return VM_STATUS_SUCCESS;
+    }
+}
+
+TVMStatus VMThreadTerminate(TVMThreadID thread) {
+    if (!threadExists(thread)) {
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+    else if (threadVector[thread]->getTVMThreadState() == VM_THREAD_STATE_DEAD) {
+        return VM_STATUS_ERROR_INVALID_STATE;
+    }
+    else {
+        threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_DEAD);
+        // Thread will still be in the ready or waiting queue, so we need to check the state in Scheduler()
+        // FIXME and must release any mutexes that it currently holds.
+        // FIXME??? Scheduling: The termination of a thread can trigger another thread to be scheduled.
+        return VM_STATUS_SUCCESS;
+    }
+}
+    
+bool threadExists(TVMThreadID thread) {
+    bool exists;
+    if (thread >= threadVector.size())
+    {
+        exists = 0;
+    }
+    else if (threadVector[thread]->getDeleted() == 1) {
+        exists = 0;
+    }
+    else {
+        exists = 1;
+    }
+    return exists;
+}
+    
+/*
 TVMStatus VMThreadSleep(TVMTick tick);
 
 TVMStatus VMMutexCreate(TVMMutexIDRef mutexref);
@@ -258,6 +335,9 @@ TVMStatus VMMutexRelease(TVMMutexID mutex);
 
 void Scheduler() {
 	
+    // Thread will still be in the ready or waiting queue, so we need to check the state in Scheduler()
+
+    
 /*
  Pseudocode for Scheduling Algorithm
  
