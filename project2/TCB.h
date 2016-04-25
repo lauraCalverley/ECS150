@@ -26,91 +26,29 @@ public:
     volatile int callbackStatus; // 0 is waiting, 1 is operation done
     static int threadCount;
 
-    TCB() { // main's TCB
-        threadID = threadCount;
-        threadCount++;
-        
-        stackPointer = NULL;
-        stackSize = 0;
-        
-        state = VM_THREAD_STATE_RUNNING;
-        priority = VM_THREAD_PRIORITY_NORMAL;
-        
-        entry = NULL;
-        params = NULL;
-        
-        context = NULL;
-        
-        deleted = 0;
-        
-    }
+    TCB();
+    TCB(char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c);
     
-    //TCB main(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+    TVMThreadID getThreadID();
+    void setThreadID(TVMThreadID id);
+    
+    
+    TVMThreadEntry getTVMThreadEntry();
+    void setTVMThreadEntry(TVMThreadEntry e);
 
     
-    TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c) {
-        
-        threadID = threadCount;
-        *tid = threadID; // FIXME???
-        threadCount++;
-
-        stackPointer = stackP;
-        stackSize = stackS;
-        
-        state = s;
-        priority = p;
-        
-        entry = e;
-        params = entryParams;
-        
-        context = c;
-        
-        deleted = 0;
-    }
+    TVMThreadState getTVMThreadState();
+    void setTVMThreadState(TVMThreadState s);
     
-    
-    TVMThreadID getThreadID() {
-        return threadID;
-    }
-    void setThreadID(TVMThreadID id) {
-        threadID = id;
-    }
-    
-    
-    TVMThreadEntry getTVMThreadEntry() {
-        return entry;
-    }
-    void setTVMThreadEntry(TVMThreadEntry e) {
-        entry = e;
-    }
+    TVMThreadPriority getTVMThreadPriority();
+    void setTVMThreadPriority(TVMThreadPriority p);
 
     
-    TVMThreadState getTVMThreadState() {
-        return state;
-    }
-    void setTVMThreadState(TVMThreadState s) {
-        state = s;
-    }
-    
-    
-    TVMThreadPriority getTVMThreadPriority() {
-        return priority;
-    }
-    void setTVMThreadPriority(TVMThreadPriority p) {
-        priority = p;
-    }
+    int getDeleted();
+    void setDeleted(int i);
 
     
-    int getDeleted() {
-        return deleted;
-    }
-    void setDeleted(int i = 1) { // should only be used to mark as deleted because once deleted, would no longer access
-        deleted = i;
-    }
-
-    
-    friend bool operator<(const TCB& lhs, const TCB& rhs)
-    {
+    friend bool operator<(const TCB& lhs, const TCB& rhs){
         if (lhs.priority < rhs.priority) {
             return 1;
         }
@@ -118,7 +56,6 @@ public:
             return 0;
         }
     }
-    
 };
 
 #endif

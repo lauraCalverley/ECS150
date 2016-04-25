@@ -57,9 +57,8 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         //VMThreadCreate(module, NULL, 0x100000, VM_THREAD_PRIORITY_NORMAL, &VMMainThreadID);
         //VMThreadActivate(VMMainThreadID);
         SMachineContextRef mcntxrefMain; // placeholder: this will be assigned when context is switched
-        TVMThreadIDRef mainTID = NULL;
-        TCB mainThread(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
-        threadVector.push_back(&mainThread);
+        TCB mainThread(NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+        //threadVector.push_back(&mainThread);
         //TCB mainThread();
         
         //TVMThreadIDRef idleTID = NULL;
@@ -229,7 +228,9 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
 	SMachineContextRef mcntxref;
 	tid = NULL;
 	MachineContextCreate(mcntxref, entry, param, stackPointer, memsize);
-	TCB thread(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
+	TCB thread(stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
+    TVMThreadID temp = thread.getThreadID();
+    tid = &temp;
 	threadVector.push_back(&thread);
 	
 	return VM_STATUS_SUCCESS;
