@@ -53,22 +53,19 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
     }
     else {
-        //TVMThreadID VMMainThreadID;
-        //VMThreadCreate(module, NULL, 0x100000, VM_THREAD_PRIORITY_NORMAL, &VMMainThreadID);
-        //VMThreadActivate(VMMainThreadID);
         SMachineContextRef mcntxrefMain; // placeholder: this will be assigned when context is switched
-        TCB mainThread(NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
-        //threadVector.push_back(&mainThread);
-        //TCB mainThread();
+        TVMThreadIDRef mainTID = NULL;
+        TCB mainThread(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+        threadVector.push_back(&mainThread);
         
         //TVMThreadIDRef idleTID = NULL;
 		//VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID); // pushed back in VMThreadCreate
 
         module(argc, argv);
         
-        // activate and run idle thread
+        // temp for testing: activate and run idle thread
         
-        // switch back to main thread
+        // temp for testing: switch back to main thread
         
         return VM_STATUS_SUCCESS;
     }
@@ -228,9 +225,7 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
 	SMachineContextRef mcntxref;
 	tid = NULL;
 	MachineContextCreate(mcntxref, entry, param, stackPointer, memsize);
-	TCB thread(stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
-    TVMThreadID temp = thread.getThreadID();
-    tid = &temp;
+	TCB thread(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
 	threadVector.push_back(&thread);
 	
 	return VM_STATUS_SUCCESS;

@@ -4,7 +4,7 @@
 
 int TCB::threadCount;
 
-TCB::TCB() { // main's TCB
+/*TCB::TCB() { // main's TCB
         threadID = threadCount;
         threadCount++;
         
@@ -21,15 +21,14 @@ TCB::TCB() { // main's TCB
         
         deleted = 0;
         
-    }
+    }*/
     
-    //TCB main(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+ 
     
-    
-TCB::TCB(char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c) {
+TCB::TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c) {
         
         threadID = threadCount;
-        //*tid = threadID; // FIXME???
+        tid = &threadID; // FIXME???
         threadCount++;
         
         stackPointer = stackP;
@@ -82,6 +81,6 @@ void TCB::setTVMThreadPriority(TVMThreadPriority p) {
 int TCB::getDeleted() {
         return deleted;
 }
-void TCB::setDeleted(int i = 1) { // should only be used to mark as deleted because once deleted, would no longer access
+void TCB::setDeleted(int i) { // should only be used to mark as deleted because once deleted, would no longer access
         deleted = i;
 }

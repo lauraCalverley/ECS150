@@ -26,8 +26,8 @@ public:
     volatile int callbackStatus; // 0 is waiting, 1 is operation done
     static int threadCount;
 
-    TCB();
-    TCB(char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c);
+    //TCB();
+    TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c);
     
     TVMThreadID getThreadID();
     void setThreadID(TVMThreadID id);
@@ -45,7 +45,7 @@ public:
 
     
     int getDeleted();
-    void setDeleted(int i);
+    void setDeleted(int i=1);
 
     
     friend bool operator<(const TCB& lhs, const TCB& rhs){
