@@ -26,6 +26,28 @@ public:
     volatile int callbackStatus; // 0 is waiting, 1 is operation done
     static int threadCount;
 
+    TCB() { // main's TCB
+        threadID = threadCount;
+        threadCount++;
+        
+        stackPointer = NULL;
+        stackSize = 0;
+        
+        state = VM_THREAD_STATE_RUNNING;
+        priority = VM_THREAD_PRIORITY_NORMAL;
+        
+        entry = NULL;
+        params = NULL;
+        
+        context = NULL;
+        
+        deleted = 0;
+        
+    }
+    
+    //TCB main(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+
+    
     TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c) {
         
         threadID = threadCount;

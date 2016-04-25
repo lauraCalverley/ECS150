@@ -56,14 +56,15 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         //TVMThreadID VMMainThreadID;
         //VMThreadCreate(module, NULL, 0x100000, VM_THREAD_PRIORITY_NORMAL, &VMMainThreadID);
         //VMThreadActivate(VMMainThreadID);
-        SMachineContextRef mcntxrefMain;
+        SMachineContextRef mcntxrefMain; // placeholder: this will be assigned when context is switched
         TVMThreadIDRef mainTID = NULL;
-        TCB main(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);       
+        TCB mainThread(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+        threadVector.push_back(&mainThread);
+        //TCB mainThread();
+        
+        //TVMThreadIDRef idleTID = NULL;
+		//VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID); // pushed back in VMThreadCreate
 
-        TVMThreadIDRef idleTID = NULL;
-		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID);
-
-        threadVector.push_back(&main);
         module(argc, argv);
         
         // activate and run idle thread
@@ -236,11 +237,12 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
 }
 
 TVMStatus VMThreadID(TVMThreadIDRef threadref) {
-	threadref = &CURRENT_THREAD;
 	if (threadref == NULL) {
 		return VM_STATUS_ERROR_INVALID_PARAMETER;
 	}
 	else {
+        TVMThreadID id = threadVector[CURRENT_THREAD]->getThreadID();
+        threadref = &id;
 		return VM_STATUS_SUCCESS;
 	}
 }
@@ -262,12 +264,12 @@ TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref) {
     if (!threadExists(thread)) {
         return VM_STATUS_ERROR_INVALID_ID;
     }
-    TVMThreadState state = threadVector[thread]->getTVMThreadState();
-    stateref = &state;
-    if (stateref == NULL) {
+    else if (stateref == NULL) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     else {
+        TVMThreadState state = threadVector[thread]->getTVMThreadState();
+        stateref = &state;
         return VM_STATUS_SUCCESS;
     }
 }
@@ -348,20 +350,28 @@ void Scheduler() {
 
 
 }
+    
+}
 
-   
+
 
 /*
  Helpful things:
  ps aux | grep vm
  kill -9 <process_id>
- * 
+ *
  *  // @567 @630 @676 @716
-    
-    //  Christopher Nitta: You may not need to use MachineContextSave or MachineContextRestore.
-    // The MachineContextSwitch will probably be what you will want to use. It saves the existing context and restores the new one. 
-
+ 
+ //  Christopher Nitta: You may not need to use MachineContextSave or MachineContextRestore.
+ // The MachineContextSwitch will probably be what you will want to use. It saves the existing context and restores the new one.
+ 
  */
 
 
-}
+/* To Do List
+ - test main and idle threads...the very basics
+ - update VMThreadSleep (and associated functions) to be multithreaded
+ 
+ 
+ 
+ */
