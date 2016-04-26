@@ -77,7 +77,16 @@ void TCB::setTVMThreadPriority(TVMThreadPriority p) {
         priority = p;
 }
     
-    
+SMachineContextRef TCB::getMachineContext() {
+    return context;
+}
+
+void TCB::setMachineContext(SMachineContextRef c) {
+    context = c;
+}
+
+
+
 int TCB::getDeleted() {
         return deleted;
 }
