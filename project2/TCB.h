@@ -8,7 +8,7 @@ class TCB {
     TVMThreadID threadID;
     
     char *stackPointer;
-	TVMMemorySize stackSize; // FIXME??? should it be of size_t???
+	TVMMemorySize stackSize;
    
     TVMThreadState state;
     TVMThreadPriority priority;
@@ -32,9 +32,18 @@ public:
     TVMThreadID getThreadID();
     void setThreadID(TVMThreadID id);
     
+    char* getStackPointer();
+    void setStackPointer(char* s);
+    
+    TVMMemorySize getStackSize();
+    void setStackSize(TVMMemorySize s);
+    
     
     TVMThreadEntry getTVMThreadEntry();
     void setTVMThreadEntry(TVMThreadEntry e);
+    
+    void* getParams();
+    void setParams(void* p);
 
     
     TVMThreadState getTVMThreadState();

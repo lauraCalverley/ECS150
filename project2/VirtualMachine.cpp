@@ -56,19 +56,22 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         SMachineContextRef mcntxrefMain; // placeholder: this will be assigned when context is switched
         cout << "main's context: " << mcntxrefMain << endl;
         TVMThreadIDRef mainTID;
-        TCB mainThread(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
-        threadVector.push_back(&mainThread);
-        
+        TCB* mainThread = new TCB(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+        threadVector.push_back(mainThread);
+        cout << "size1: " << threadVector.size() << endl;
+
         TVMThreadIDRef idleTID;
 		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID); // pushed back in VMThreadCreate
+        cout << "size2: " << threadVector.size() << endl;
 
-        cout << "size: " << threadVector.size() << endl;
         
-        module(argc, argv);
+        //module(argc, argv);
         
         // temp for testing: activate and run idle thread
         //activate idle thread
-        VMThreadActivate(*idleTID);
+        cout << "ReadyQueue size BEFORE: " << readyQueue.size() << endl;
+        VMThreadActivate(threadVector[1]->getThreadID());
+        cout << "ReadyQueue size AFTER: " << readyQueue.size() << endl;
 
         //context switch from idle to main
         //cout << "idle's context: " << threadVector[*idleTID]->getMachineContext() << endl;
@@ -78,6 +81,8 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         // temp for testing: switch back to main thread
         
         module(argc, argv);
+        
+        // FIXME deallocate memory for TCBs and such
 
         return VM_STATUS_SUCCESS;
     }
@@ -233,28 +238,13 @@ void callbackMachineFileClose(void *calldata, int result) {
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
     
     if ((entry==NULL) || (tid==NULL)) {
-        cout << "here :(" << endl;
-        //cout << "entry: " << entry << endl;
-        //cout << "tid: " << tid << endl;
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
-    /*cout << "Parameters..." << endl;
-    cout << "entry" << *entry << endl;
-    cout << "param" << param << endl;
-    cout << "memsize" << memsize << endl;
-    cout << "prio" << prio << endl;
-    cout << "tid" << *tid << endl;*/
-
-    
 	char *stackPointer = new char[memsize];
 	SMachineContextRef mcntxref;
-    //tid = NULL;
-    cout << "in VMThreadCreate1: " << mcntxref << endl;
-	//MachineContextCreate(mcntxref, entry, param, stackPointer, memsize); // put in Activate
-    cout << "in VMThreadCreate2: " << mcntxref << endl;
-	TCB thread(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
-	threadVector.push_back(&thread);
+	TCB* thread = new TCB(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
+	threadVector.push_back(thread);
 	
 	return VM_STATUS_SUCCESS;
     
@@ -300,13 +290,19 @@ TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref) {
 
 TVMStatus VMThreadActivate(TVMThreadID thread) {
     if (!threadExists(thread)) {
+        cout << "if" << endl;
         return VM_STATUS_ERROR_INVALID_ID;
     }
     else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
+        cout << "else if" << endl;
+        cout << threadVector[thread]->getTVMThreadState() << endl;
         return VM_STATUS_ERROR_INVALID_STATE;
     }
     else {
-        threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
+        cout << "else" << endl;
+        MachineContextCreate(threadVector[thread]->getMachineContext(), threadVector[thread]->getTVMThreadEntry(), threadVector[thread]->getParams(), threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
+        cout << "post MachineContextCreate" << endl;
+        threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY); // FIXME ordering??
         readyQueue.push(threadVector[thread]);
         return VM_STATUS_SUCCESS;
     }

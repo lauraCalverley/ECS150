@@ -53,15 +53,42 @@ void TCB::setThreadID(TVMThreadID id) {
         threadID = id;
 }
     
-    
+char* TCB::getStackPointer() {
+    return stackPointer;
+}
+
+void TCB::setStackPointer(char* s) {
+    stackPointer = s;
+}
+
+
+TVMMemorySize TCB::getStackSize() {
+    return stackSize;
+}
+
+void TCB::setStackSize(TVMMemorySize s) {
+    stackSize = s;
+}
+
+
 TVMThreadEntry TCB::getTVMThreadEntry() {
         return entry;
 }
 void TCB::setTVMThreadEntry(TVMThreadEntry e) {
         entry = e;
 }
-    
-    
+
+
+void* TCB::getParams() {
+    return params;
+}
+
+
+void TCB::setParams(void* p) {
+    params = p;
+}
+
+
 TVMThreadState TCB::getTVMThreadState() {
         return state;
 }
