@@ -1,7 +1,9 @@
 #include "TCB.h"
 #include "VirtualMachine.h"
 #include "Machine.h"
-    
+
+#include <iostream> // temp?
+using namespace std; // temp?
 TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c) {
         
         threadID = tid;
@@ -14,15 +16,17 @@ TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, 
         
         entry = e;
         params = entryParams;
-        
+    
         context = c;
         
         deleted = 0;
     }
     
-    
 TVMThreadID TCB::getThreadID() {
-        return threadID;
+    return threadID;
+}
+TVMThreadIDRef TCB::getThreadIDRef() {
+        return &threadID;
 }
 void TCB::setThreadID(TVMThreadID id) {
         threadID = id;

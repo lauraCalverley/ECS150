@@ -28,6 +28,7 @@ public:
     TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c);
     
     TVMThreadID getThreadID();
+    TVMThreadIDRef getThreadIDRef();
     void setThreadID(TVMThreadID id);
     
     char* getStackPointer();
@@ -39,10 +40,9 @@ public:
     
     TVMThreadEntry getTVMThreadEntry();
     void setTVMThreadEntry(TVMThreadEntry e);
-    
+
     void* getParams();
     void setParams(void* p);
-
     
     TVMThreadState getTVMThreadState();
     void setTVMThreadState(TVMThreadState s);

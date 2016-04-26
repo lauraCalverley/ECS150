@@ -36,6 +36,7 @@ void callbackMachineFileWrite(void *calldata, int result);
 void callbackMachineFileClose(void *calldata, int result);
 
 bool threadExists(TVMThreadID thread);
+void entrySkeleton(void *thread);
     
 // The following are defined in VirtualMachineUtils.c:
 // TVMMainEntry VMLoadModule(const char *module)
@@ -68,18 +69,23 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         // temp for testing: activate and run idle thread
         //activate idle thread
         VMThreadActivate(threadVector[idleTID]->getThreadID());
-        VMThreadTerminate(threadVector[idleTID]->getThreadID());
+        
 
-        module(argc, argv);
+        //entrySkeleton(idle, NULL);
+        //CURRENT_THREAD = 0;
+
+        //cout << "state: " << threadVector[idleTID]->getTVMThreadState() << endl;
+        //VMThreadTerminate(threadVector[idleTID]->getThreadID());
+
+        //module(argc, argv);
         //context switch from idle to main
 
-        //MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
-        //CURRENT_THREAD = 1;
-        //MachineContextSwitch(threadVector[idleTID]->getMachineContext(),threadVector[mainTID]->getMachineContext());
+        CURRENT_THREAD = 1;
+        MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
+        cout << "here" << endl;
         //CURRENT_THREAD = 0;
         //cout << "in between" << endl;
         //MachineContextSwitch (threadVector[*mainTID]->getMachineContext(),threadVector[*idleTID]->getMachineContext());
-        
         module(argc, argv);
         
         // FIXME deallocate memory for TCBs and such
@@ -238,10 +244,11 @@ void callbackMachineFileClose(void *calldata, int result) {
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
     
     /*if ((entry==NULL) || (tid==NULL)) {
+        cout << "";
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }*/
     if (entry==NULL) {
-        cout << ""; //FIMXE cout issue - w/o, it seg faults
+        cout << ""; //FIMXE cout issue - w/o, it seg faults // NITTA says there is a bigger issue with our stack and such
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     if (tid==NULL) {
@@ -265,8 +272,7 @@ TVMStatus VMThreadID(TVMThreadIDRef threadref) {
 		return VM_STATUS_ERROR_INVALID_PARAMETER;
 	}
 	else {
-        TVMThreadID id = threadVector[CURRENT_THREAD]->getThreadID();
-        threadref = &id;
+        threadref = threadVector[CURRENT_THREAD]->getThreadIDRef();
 		return VM_STATUS_SUCCESS;
 	}
 }
@@ -313,7 +319,7 @@ TVMStatus VMThreadActivate(TVMThreadID thread) {
         //SMachineContextRef tempContext = threadVector[thread]->getMachineContext();
         //cout << "after getMachineContext" << endl;
         
-        MachineContextCreate(threadVector[thread]->getMachineContext(), threadVector[thread]->getTVMThreadEntry(), threadVector[thread]->getParams(), threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
+        MachineContextCreate(threadVector[thread]->getMachineContext(), entrySkeleton, threadVector[thread], threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
         //cout << "post MachineContextCreate" << endl;
         threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY); // FIXME ordering??
         readyQueue.push(threadVector[thread]);
@@ -330,6 +336,9 @@ TVMStatus VMThreadTerminate(TVMThreadID thread) {
     }
     else {
         threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_DEAD);
+        CURRENT_THREAD = 0;
+        MachineContextSwitch(threadVector[1]->getMachineContext(),threadVector[0]->getMachineContext());
+        //cout << "thread was terminated" << endl;
         // Thread will still be in the ready or waiting queue, so we need to check the state in Scheduler()
         // FIXME and must release any mutexes that it currently holds.
         // FIXME??? Scheduling: The termination of a thread can trigger another thread to be scheduled.
@@ -362,10 +371,14 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout);
 TVMStatus VMMutexRelease(TVMMutexID mutex);
 */
     
-/*void entrySkeleton(TVMThreadEntry entry, void *params) { // FIXME???
-	entry(params);
+//void entrySkeleton(TVMThreadEntry entry, void *params) { // FIXME???
+void entrySkeleton(void *thread) { // FIXME???
+    TCB* theThread = (TCB*)thread;
+    TVMThreadEntry entry = theThread->getTVMThreadEntry();
+    void* entryParams = theThread->getParams();
+    entry(entryParams);
 	VMThreadTerminate(CURRENT_THREAD);
-}*/
+}
 
 
 void Scheduler() {
@@ -394,17 +407,10 @@ void Scheduler() {
  kill -9 <process_id>
  *
  *  // @567 @630 @676 @716
- 
- //  Christopher Nitta: You may not need to use MachineContextSave or MachineContextRestore.
- // The MachineContextSwitch will probably be what you will want to use. It saves the existing context and restores the new one.
- 
  */
 
 
 /* To Do List
  - test main and idle threads...the very basics
  - update VMThreadSleep (and associated functions) to be multithreaded
- 
- - ask Nitta: weird cout if statement thing and return ERROR_____ not printing anything?
- 
  */
