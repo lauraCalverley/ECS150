@@ -25,7 +25,7 @@ int TCB::threadCount;
     
  
     
-TCB::TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c) {
+TCB::TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c) {
         
         threadID = threadCount;
         tid = &threadID; // FIXME???
@@ -104,11 +104,11 @@ void TCB::setTVMThreadPriority(TVMThreadPriority p) {
         priority = p;
 }
     
-SMachineContextRef TCB::getMachineContext() {
+SMachineContext TCB::getMachineContext() {
     return context;
 }
 
-void TCB::setMachineContext(SMachineContextRef c) {
+void TCB::setMachineContext(SMachineContext c) {
     context = c;
 }
 

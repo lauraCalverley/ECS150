@@ -16,7 +16,7 @@ class TCB {
     TVMThreadEntry entry;
 	void *params;
     
-    SMachineContextRef context;// this is a pointer
+    SMachineContext context;// this is a pointer
     
     int deleted;
     
@@ -27,7 +27,7 @@ public:
     static int threadCount;
 
     //TCB();
-    TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContextRef c);
+    TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c);
     
     TVMThreadID getThreadID();
     void setThreadID(TVMThreadID id);
@@ -52,8 +52,8 @@ public:
     TVMThreadPriority getTVMThreadPriority();
     void setTVMThreadPriority(TVMThreadPriority p);
 
-    SMachineContextRef getMachineContext();
-    void setMachineContext(SMachineContextRef c);
+    SMachineContext getMachineContext();
+    void setMachineContext(SMachineContext c);
     
     int getDeleted();
     void setDeleted(int i=1);

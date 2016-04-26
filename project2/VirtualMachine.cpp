@@ -53,25 +53,25 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
     }
     else {
-        SMachineContextRef mcntxrefMain; // placeholder: this will be assigned when context is switched
-        cout << "main's context: " << mcntxrefMain << endl;
+        SMachineContext mcntxMain; // placeholder: this will be assigned when context is switched
         TVMThreadIDRef mainTID;
-        TCB* mainThread = new TCB(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxrefMain);
+        TCB* mainThread = new TCB(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxMain);
         threadVector.push_back(mainThread);
-        cout << "size1: " << threadVector.size() << endl;
+        //cout << "size1: " << threadVector.size() << endl;
 
         TVMThreadIDRef idleTID;
 		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID); // pushed back in VMThreadCreate
-        cout << "size2: " << threadVector.size() << endl;
+        //cout << "size2: " << threadVector.size() << endl;
 
         
         //module(argc, argv);
         
         // temp for testing: activate and run idle thread
         //activate idle thread
-        cout << "ReadyQueue size BEFORE: " << readyQueue.size() << endl;
+        //cout << "ReadyQueue size BEFORE: " << readyQueue.size() << endl;
+        
         VMThreadActivate(threadVector[1]->getThreadID());
-        cout << "ReadyQueue size AFTER: " << readyQueue.size() << endl;
+        //cout << "ReadyQueue size AFTER: " << readyQueue.size() << endl;
 
         //context switch from idle to main
         //cout << "idle's context: " << threadVector[*idleTID]->getMachineContext() << endl;
@@ -237,13 +237,23 @@ void callbackMachineFileClose(void *calldata, int result) {
 
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
     
-    if ((entry==NULL) || (tid==NULL)) {
+    /*if ((entry==NULL) || (tid==NULL)) {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }*/
+    if (entry==NULL) {
+        cout << ""; //FIMXE cout issue - w/o, it seg faults
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    if (tid==NULL) {
+        cout << ""; //FIMXE cout issue - w/o, it seg faults
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
+    //cout << "not in if" << endl;
 	char *stackPointer = new char[memsize];
-	SMachineContextRef mcntxref;
-	TCB* thread = new TCB(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntxref);
+	SMachineContext mcntx;
+    
+	TCB* thread = new TCB(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
 	threadVector.push_back(thread);
 	
 	return VM_STATUS_SUCCESS;
@@ -290,18 +300,21 @@ TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref) {
 
 TVMStatus VMThreadActivate(TVMThreadID thread) {
     if (!threadExists(thread)) {
-        cout << "if" << endl;
+        //cout << "if" << endl;
         return VM_STATUS_ERROR_INVALID_ID;
     }
     else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
-        cout << "else if" << endl;
+        //cout << "else if" << endl;
         cout << threadVector[thread]->getTVMThreadState() << endl;
         return VM_STATUS_ERROR_INVALID_STATE;
     }
     else {
-        cout << "else" << endl;
-        MachineContextCreate(threadVector[thread]->getMachineContext(), threadVector[thread]->getTVMThreadEntry(), threadVector[thread]->getParams(), threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
-        cout << "post MachineContextCreate" << endl;
+        //cout << "else" << endl;
+        SMachineContext tempContext = threadVector[thread]->getMachineContext();
+        //cout << "after getMachineContext" << endl;
+        
+        MachineContextCreate(&tempContext, threadVector[thread]->getTVMThreadEntry(), threadVector[thread]->getParams(), threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
+        //cout << "post MachineContextCreate" << endl;
         threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY); // FIXME ordering??
         readyQueue.push(threadVector[thread]);
         return VM_STATUS_SUCCESS;
