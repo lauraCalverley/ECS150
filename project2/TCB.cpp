@@ -1,36 +1,11 @@
 #include "TCB.h"
 #include "VirtualMachine.h"
 #include "Machine.h"
-
-int TCB::threadCount;
-
-/*TCB::TCB() { // main's TCB
-        threadID = threadCount;
-        threadCount++;
-        
-        stackPointer = NULL;
-        stackSize = 0;
-        
-        state = VM_THREAD_STATE_RUNNING;
-        priority = VM_THREAD_PRIORITY_NORMAL;
-        
-        entry = NULL;
-        params = NULL;
-        
-        context = NULL;
-        
-        deleted = 0;
-        
-    }*/
     
- 
+TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c) {
+        
+        threadID = tid;
     
-TCB::TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c) {
-        
-        threadID = threadCount;
-        tid = &threadID; // FIXME???
-        threadCount++;
-        
         stackPointer = stackP;
         stackSize = stackS;
         

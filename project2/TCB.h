@@ -24,10 +24,8 @@ public:
     
     volatile int SleepCount; // public?
     volatile int callbackStatus; // 0 is waiting, 1 is operation done
-    static int threadCount;
 
-    //TCB();
-    TCB(TVMThreadIDRef tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c);
+    TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c);
     
     TVMThreadID getThreadID();
     void setThreadID(TVMThreadID id);

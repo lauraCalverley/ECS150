@@ -54,13 +54,14 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
     }
     else {
         SMachineContext mcntxMain; // placeholder: this will be assigned when context is switched
-        TVMThreadIDRef mainTID;
+        TVMThreadID mainTID = threadVector.size();
         TCB* mainThread = new TCB(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxMain);
         threadVector.push_back(mainThread);
         //cout << "size1: " << threadVector.size() << endl;
 
-        TVMThreadIDRef idleTID;
-		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, idleTID); // pushed back in VMThreadCreate
+        TVMThreadID idleTID = threadVector.size();
+        cout << "idle TID is " << idleTID << endl;
+		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
         //cout << "size2: " << threadVector.size() << endl;
 
         
@@ -70,8 +71,10 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         //activate idle thread
         //cout << "ReadyQueue size BEFORE: " << readyQueue.size() << endl;
         
-        VMThreadActivate(threadVector[1]->getThreadID());
-        //cout << "ReadyQueue size AFTER: " << readyQueue.size() << endl;
+        cout << "idle TID is " << idleTID << endl;
+        cout << "get thread id is " << threadVector[1]->getThreadID() << endl;
+        VMThreadActivate(threadVector[idleTID]->getThreadID());
+        cout << "ReadyQueue size AFTER: " << readyQueue.size() << endl;
 
         //context switch from idle to main
         //cout << "idle's context: " << threadVector[*idleTID]->getMachineContext() << endl;
@@ -253,7 +256,7 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
 	char *stackPointer = new char[memsize];
 	SMachineContext mcntx;
     
-	TCB* thread = new TCB(tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
+	TCB* thread = new TCB(*tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
 	threadVector.push_back(thread);
 	
 	return VM_STATUS_SUCCESS;
