@@ -79,8 +79,8 @@ void TCB::setTVMThreadPriority(TVMThreadPriority p) {
         priority = p;
 }
     
-SMachineContext TCB::getMachineContext() {
-    return context;
+SMachineContextRef TCB::getMachineContext() {
+    return &context;
 }
 
 void TCB::setMachineContext(SMachineContext c) {

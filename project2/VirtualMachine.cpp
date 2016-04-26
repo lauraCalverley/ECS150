@@ -53,35 +53,32 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
     }
     else {
+        // create main TCB
         SMachineContext mcntxMain; // placeholder: this will be assigned when context is switched
         TVMThreadID mainTID = threadVector.size();
         TCB* mainThread = new TCB(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxMain);
         threadVector.push_back(mainThread);
-        //cout << "size1: " << threadVector.size() << endl;
 
+        // create idle thread and TCB
         TVMThreadID idleTID = threadVector.size();
-        cout << "idle TID is " << idleTID << endl;
 		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
-        //cout << "size2: " << threadVector.size() << endl;
-
         
-        //module(argc, argv);
+        module(argc, argv);
         
         // temp for testing: activate and run idle thread
         //activate idle thread
-        //cout << "ReadyQueue size BEFORE: " << readyQueue.size() << endl;
-        
-        cout << "idle TID is " << idleTID << endl;
-        cout << "get thread id is " << threadVector[1]->getThreadID() << endl;
         VMThreadActivate(threadVector[idleTID]->getThreadID());
-        cout << "ReadyQueue size AFTER: " << readyQueue.size() << endl;
+        VMThreadTerminate(threadVector[idleTID]->getThreadID());
 
+        module(argc, argv);
         //context switch from idle to main
-        //cout << "idle's context: " << threadVector[*idleTID]->getMachineContext() << endl;
-        //MachineContextSwitch (mcntxrefMain,threadVector[*idleTID]->getMachineContext());
+
+        //MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
+        //CURRENT_THREAD = 1;
+        //MachineContextSwitch(threadVector[idleTID]->getMachineContext(),threadVector[mainTID]->getMachineContext());
+        //CURRENT_THREAD = 0;
         //cout << "in between" << endl;
         //MachineContextSwitch (threadVector[*mainTID]->getMachineContext(),threadVector[*idleTID]->getMachineContext());
-        // temp for testing: switch back to main thread
         
         module(argc, argv);
         
@@ -313,10 +310,10 @@ TVMStatus VMThreadActivate(TVMThreadID thread) {
     }
     else {
         //cout << "else" << endl;
-        SMachineContext tempContext = threadVector[thread]->getMachineContext();
+        //SMachineContextRef tempContext = threadVector[thread]->getMachineContext();
         //cout << "after getMachineContext" << endl;
         
-        MachineContextCreate(&tempContext, threadVector[thread]->getTVMThreadEntry(), threadVector[thread]->getParams(), threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
+        MachineContextCreate(threadVector[thread]->getMachineContext(), threadVector[thread]->getTVMThreadEntry(), threadVector[thread]->getParams(), threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
         //cout << "post MachineContextCreate" << endl;
         threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY); // FIXME ordering??
         readyQueue.push(threadVector[thread]);
@@ -408,6 +405,6 @@ void Scheduler() {
  - test main and idle threads...the very basics
  - update VMThreadSleep (and associated functions) to be multithreaded
  
- 
+ - ask Nitta: weird cout if statement thing and return ERROR_____ not printing anything?
  
  */

@@ -50,7 +50,7 @@ public:
     TVMThreadPriority getTVMThreadPriority();
     void setTVMThreadPriority(TVMThreadPriority p);
 
-    SMachineContext getMachineContext();
+    SMachineContextRef getMachineContext();
     void setMachineContext(SMachineContext c);
     
     int getDeleted();
