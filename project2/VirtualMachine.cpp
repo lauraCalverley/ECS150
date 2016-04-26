@@ -413,4 +413,7 @@ void Scheduler() {
 /* To Do List
  - test main and idle threads...the very basics
  - update VMThreadSleep (and associated functions) to be multithreaded
+ 
+ 
+ - First thing on Wed: debug/test VMThread ...VMThreadID VMThreadDelete VMThread State; then Scheduler()
  */
