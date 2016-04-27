@@ -61,9 +61,14 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         threadVector.push_back(mainThread);
 
         // create idle thread and TCB
-        TVMThreadID idleTID = threadVector.size();
+        //TVMThreadID idleTID = threadVector.size();
+        TVMThreadID idleTID;
 		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
+
         
+        
+        //cout << "IN VMStart, idleTID is " << idleTID << endl;
+
         module(argc, argv);
         
         // temp for testing: activate and run idle thread
@@ -79,17 +84,22 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
 
         //module(argc, argv);
         //context switch from idle to main
-
-        CURRENT_THREAD = 1;
-        MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
-        cout << "here" << endl;
+        
+        
+        
+        
+        
+        
+        
+        //MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
+        //cout << "here" << endl;
         //CURRENT_THREAD = 0;
         //cout << "in between" << endl;
         //MachineContextSwitch (threadVector[*mainTID]->getMachineContext(),threadVector[*idleTID]->getMachineContext());
-        module(argc, argv);
+        //module(argc, argv);
         
         // FIXME deallocate memory for TCBs and such
-
+        
         return VM_STATUS_SUCCESS;
     }
 }
@@ -252,7 +262,7 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     if (tid==NULL) {
-        cout << ""; //FIMXE cout issue - w/o, it seg faults
+        cout << ""; //FIMXE cout issuecle - w/o, it seg faults
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
@@ -260,8 +270,11 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
 	char *stackPointer = new char[memsize];
 	SMachineContext mcntx;
     
-	TCB* thread = new TCB(*tid, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
-	threadVector.push_back(thread);
+    TVMThreadID newThreadID = threadVector.size();
+    TCB* thread = new TCB(newThreadID, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
+    threadVector.push_back(thread);
+    //tid = threadVector[newThreadID]->getThreadIDRef(); // THIS IS THE BAD WAY
+    *tid = threadVector[newThreadID]->getThreadID(); // (OPTIONAL) FIXME: if id was later updated, don't think variable external to this function would be made aware of the change...
 	
 	return VM_STATUS_SUCCESS;
     
@@ -272,7 +285,13 @@ TVMStatus VMThreadID(TVMThreadIDRef threadref) {
 		return VM_STATUS_ERROR_INVALID_PARAMETER;
 	}
 	else {
-        threadref = threadVector[CURRENT_THREAD]->getThreadIDRef();
+        //cout << "";
+        //cout << "CURRENT_THREAD IS " << CURRENT_THREAD << endl;
+        *threadref = threadVector[CURRENT_THREAD]->getThreadID();
+        
+        //TVMThreadID temp = threadVector[CURRENT_THREAD]->getThreadID();
+        //threadref = &temp;
+        //cout << "value of threadref is" << *threadref << endl;
 		return VM_STATUS_SUCCESS;
 	}
 }
@@ -298,8 +317,8 @@ TVMStatus VMThreadState(TVMThreadID thread, TVMThreadStateRef stateref) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     else {
-        TVMThreadState state = threadVector[thread]->getTVMThreadState();
-        stateref = &state;
+        //TVMThreadState state = threadVector[thread]->getTVMThreadState();
+        *stateref = threadVector[thread]->getTVMThreadState();
         return VM_STATUS_SUCCESS;
     }
 }
@@ -336,8 +355,8 @@ TVMStatus VMThreadTerminate(TVMThreadID thread) {
     }
     else {
         threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_DEAD);
-        CURRENT_THREAD = 0;
-        MachineContextSwitch(threadVector[1]->getMachineContext(),threadVector[0]->getMachineContext());
+        CURRENT_THREAD = 0; // FIXME Scheduler()
+        MachineContextSwitch(threadVector[1]->getMachineContext(),threadVector[0]->getMachineContext()); // FIXME Scheduler()
         //cout << "thread was terminated" << endl;
         // Thread will still be in the ready or waiting queue, so we need to check the state in Scheduler()
         // FIXME and must release any mutexes that it currently holds.
@@ -415,5 +434,5 @@ void Scheduler() {
  - update VMThreadSleep (and associated functions) to be multithreaded
  
  
- - First thing on Wed: debug/test VMThread ...VMThreadID VMThreadDelete VMThread State; then Scheduler()
+ - First thing on Wed: debug/test VMThread ... VMThreadDelete VMThreadState; then Scheduler()
  */
