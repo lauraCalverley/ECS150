@@ -415,9 +415,7 @@ void Scheduler(int transition, TVMThreadID thread) {
             readyQueue.push(threadVector[thread]);
 
             if (threadVector[thread]->getTVMThreadPriority() > threadVector[CURRENT_THREAD]->getTVMThreadPriority()) {
-                // make thread the running thread MCS
-                Scheduler(2, thread);
-                //threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_READY);
+                Scheduler(3, thread);
             }
             break;
         }
@@ -434,7 +432,7 @@ void Scheduler(int transition, TVMThreadID thread) {
             //  Each thread gets one quantum of time (one tick). They are then put in the ready state and scheduling is done, this means that the scheduler will need to be called in the alarm callback.
             threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(threadVector[CURRENT_THREAD]);
-            Scheduler(2, CURRENT_THREAD);
+            Scheduler(2, CURRENT_THREAD); // sort of loses track of thread that should be moved from ready to running, but easy to get with top() in case 2
             break;
         }
         case 4: { // Process terminates
@@ -443,16 +441,16 @@ void Scheduler(int transition, TVMThreadID thread) {
 
             switch (oldThreadState) {
                 case VM_THREAD_STATE_RUNNING: {
-                    Scheduler(2, CURRENT_THREAD);
+                    Scheduler(2, thread);
                     break;
                 }
                 case VM_THREAD_STATE_READY: {
-                    Vector<TCB*> tempReadyVector;
+                    vector<TCB*> tempReadyVector;
                     
                     // remove thread from readyQueue
                     while (!readyQueue.empty()) {
                         TCB *top = readyQueue.top();
-                        if (top->getThreadID() != thread->getThreadID()) {
+                        if (top->getThreadID() != threadVector[thread]->getThreadID()) {
                             tempReadyVector.push_back(top);
                         }
                         readyQueue.pop();
@@ -463,41 +461,31 @@ void Scheduler(int transition, TVMThreadID thread) {
                     break;
                 }
                 case VM_THREAD_STATE_WAITING: {
-                    
+                    // deal mutext waiting queue
+                    // deal with sleep vector if we make one
                     break;
                 }
-                    
-                default:
-                    break;
             }
-            
-            
-            threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_DEAD);
-
-            
             break;
         }
         case 5: { // Process activated
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(threadVector[thread]);
             
-            //compare running's priority to thread's priority; if thread > running: switch context and put running into ready queue, else: nothing
+            if (threadVector[thread]->getTVMThreadPriority() > threadVector[CURRENT_THREAD]->getTVMThreadPriority()) {
+                Scheduler(3, thread);
+            }
+
             break;
         }
         case 6: { // Process blocks // Scheduler(6. CURRENT_THREAD)
             // move the next 2 lines to the functions that cause something to go to waiting (mutex, file functions, VMThreadSleep)
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_WAITING);
-            // put on waiting queue
-            
-            
-            Scheduler(2, CURRENT_THREAD);
-
+            Scheduler(2, thread);
             break;
         }
-            
-        default:
-            break;
     }
+}
     
     // MCS occurs when you swap the Running threads
     
@@ -528,9 +516,6 @@ void Scheduler(int transition, TVMThreadID thread) {
  * Once this other thread gets your callback, you will put the thread that was blocking in the ready state, and then check if its priority is higher than the current running thread.  if it is, then you switch threads. if its not then it stays in the ready state.
  
 */
-
-
-}
     
 }
 
@@ -554,11 +539,26 @@ void Scheduler(int transition, TVMThreadID thread) {
  
  -- in callback, set the thread it's passed (in callback data) to READY instead of WAITING
  
+ // suspend when you enter VMFunction
+ // resume before you leave VMFunction
  
+ // signal stuff in all the functions, including callbacks
+ enable signals right before you go into the entry
  
  VMMutexCreate
  VMMutexDelete
  VMMutexQuery
  VMMutexAcquire
  VMMutexRelease
+ */
+
+
+
+
+/*
+ VMThreadSleep
+ VMThreadCreate
+ VMThreadState
+ VMThreadActivate
+ VMPrint
  */
