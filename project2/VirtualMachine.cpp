@@ -17,7 +17,9 @@ TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
 priority_queue<TCB*> readyQueue, waitingQueue;
 
-volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
+//volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
+int TICKMS;
+volatile int TICK_COUNT = 0;
 volatile int MACHINE_FILE_OPEN_STATUS = 0;
 volatile int MACHINE_FILE_SEEK_STATUS = 0;
 volatile int MACHINE_FILE_READ_STATUS = 0;
@@ -43,12 +45,32 @@ void entrySkeleton(void *thread);
 // void VMUnloadModule(void)
 // TVMStatus VMFilePrint(int filedescriptor, const char *format, ...)
 
+TVMStatus VMTickMS(int *tickmsref) {
+    if (tickmsref == NULL) {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        *tickmsref = TICKMS;
+        return VM_STATUS_SUCCESS;
+    }
+}
 
-TVMStatus VMStart(int tickms, int argc, char *argv[]) {
-    MachineInitialize();
+TVMStatus VMTickCount(TVMTickRef tickref) {
+    if (tickref == NULL) {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        *tickref = TICK_COUNT;
+        return VM_STATUS_SUCCESS;
+    }
+}
+
     
-    MachineRequestAlarm(100*1000, callbackMachineRequestAlarm, NULL); // 2nd arg is a function pointer
-
+    
+TVMStatus VMStart(int tickms, int argc, char *argv[]) {
+    TICKMS = tickms;
+    MachineInitialize();
+    MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL); // 2nd arg is a function pointer
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
         return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
@@ -77,7 +99,6 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         module(argc, argv); */
         
         // FIXME deallocate memory for TCBs and such
-        
         return VM_STATUS_SUCCESS;
     }
 }
@@ -90,7 +111,8 @@ void idle(void* x)  {
 }
 
 void callbackMachineRequestAlarm(void *calldata) {
-    //SLEEPCOUNT--;
+    TICK_COUNT++;
+    
     for (int i=0; i < threadVector.size(); i++) {
         if ((threadVector[i]->getDeleted() == 0) && (threadVector[i]->getSleepCount() > 0)) {
             threadVector[i]->decrementSleepCount();
