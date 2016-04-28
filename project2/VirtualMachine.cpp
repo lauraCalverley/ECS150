@@ -15,7 +15,7 @@ using namespace std;
 
 TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
-priority_queue<TCB*> readyQueue;
+priority_queue<TCB*> readyQueue, waitingQueue;
 
 volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
 volatile int MACHINE_FILE_OPEN_STATUS = 0;
@@ -61,42 +61,20 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         threadVector.push_back(mainThread);
 
         // create idle thread and TCB
-        //TVMThreadID idleTID = threadVector.size();
         TVMThreadID idleTID;
 		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
-
         
-        
-        //cout << "IN VMStart, idleTID is " << idleTID << endl;
-
         module(argc, argv);
         
         // temp for testing: activate and run idle thread
-        //activate idle thread
-        VMThreadActivate(threadVector[idleTID]->getThreadID());
-        
+        //VMThreadActivate(threadVector[idleTID]->getThreadID());
 
-        //entrySkeleton(idle, NULL);
-        //CURRENT_THREAD = 0;
-
-        //cout << "state: " << threadVector[idleTID]->getTVMThreadState() << endl;
-        //VMThreadTerminate(threadVector[idleTID]->getThreadID());
-
-        //module(argc, argv);
-        //context switch from idle to main
-        
-        
-        
-        
-        
-        
-        
-        //MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
-        //cout << "here" << endl;
-        //CURRENT_THREAD = 0;
+        /*CURRENT_THREAD = 1;
+        MachineContextSwitch(threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
+        CURRENT_THREAD = 0;
         //cout << "in between" << endl;
-        //MachineContextSwitch (threadVector[*mainTID]->getMachineContext(),threadVector[*idleTID]->getMachineContext());
-        //module(argc, argv);
+        MachineContextSwitch (threadVector[mainTID]->getMachineContext(),threadVector[idleTID]->getMachineContext());
+        module(argc, argv); */
         
         // FIXME deallocate memory for TCBs and such
         
@@ -105,14 +83,42 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
 }
 
 void idle(void* x)  {
-	/*while (true) {
+	while (true) {
         cout << "in idle" << endl;
-    }*/
-    cout << "in idle" << endl;
+    }
+    //cout << "in idle" << endl;
 }
 
 void callbackMachineRequestAlarm(void *calldata) {
-    SLEEPCOUNT--;
+    //SLEEPCOUNT--;
+    for (int i=0; i < threadVector.size(); i++) {
+        if ((threadVector[i]->getDeleted() == 0) && (threadVector[i]->getSleepCount() > 0)) {
+            threadVector[i]->decrementSleepCount();
+        }
+    }
+    
+}
+
+    
+TVMStatus VMThreadSleep(TVMTick tick) {
+    if (tick == VM_TIMEOUT_INFINITE) {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else if (tick == VM_TIMEOUT_IMMEDIATE) {
+        threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_READY);
+        readyQueue.push(threadVector[CURRENT_THREAD]);
+        //Scheduler()
+        return VM_STATUS_SUCCESS;
+    }
+    else {
+        threadVector[CURRENT_THREAD]->setSleepCount(tick);
+        threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_WAITING);
+        waitingQueue.push(threadVector[CURRENT_THREAD]);
+
+        while (threadVector[CURRENT_THREAD]->getSleepCount() != 0) {}
+        // call Scheduler(); // ?
+        return VM_STATUS_SUCCESS;
+    }
 }
 
 
@@ -143,22 +149,7 @@ void callbackMachineFileWrite(void *calldata, int result) {
 
 
 
-TVMStatus VMThreadSleep(TVMTick tick) {
-    
-    if (tick == VM_TIMEOUT_INFINITE) {
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }
-    else if (tick == VM_TIMEOUT_IMMEDIATE) {
-        // FIXME? No idea if this is right
-        // If tick is specified as VM_TIMEOUT_IMMEDIATE the current process yields the remainder of its processing quantum to the next ready process of equal priority.
-        return VM_STATUS_SUCCESS;
-    }
-    else {
-        SLEEPCOUNT = tick; // set global
-        while (SLEEPCOUNT != 0) {}
-        return VM_STATUS_SUCCESS;
-    }
-}
+
 
 TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
     
@@ -430,9 +421,13 @@ void Scheduler() {
 
 
 /* To Do List
- - test main and idle threads...the very basics
- - update VMThreadSleep (and associated functions) to be multithreaded
- 
- 
- - First thing on Wed: debug/test VMThread ... VMThreadDelete VMThreadState; then Scheduler()
+ VMTickMS()
+ VMTickCount()
+ Scheduler()
+ redo all VMFile*
+ VMMutexCreate
+ VMMutexDelete
+ VMMutexQuery
+ VMMutexAcquire
+ VMMutexRelease
  */

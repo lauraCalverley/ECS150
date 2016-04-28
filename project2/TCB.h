@@ -19,6 +19,8 @@ class TCB {
     SMachineContext context;// this is a pointer
     
     int deleted;
+    volatile int sleepCount;
+
     
 public:
     
@@ -56,6 +58,9 @@ public:
     int getDeleted();
     void setDeleted(int i=1);
 
+    int getSleepCount();
+    void setSleepCount(int ticks);
+    void decrementSleepCount();
     
     friend bool operator<(const TCB& lhs, const TCB& rhs){
         if (lhs.priority < rhs.priority) {

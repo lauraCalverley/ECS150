@@ -6,30 +6,31 @@
 using namespace std; // temp?
 TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c) {
         
-        threadID = tid;
+    threadID = tid;
+
+    stackPointer = stackP;
+    stackSize = stackS;
     
-        stackPointer = stackP;
-        stackSize = stackS;
-        
-        state = s;
-        priority = p;
-        
-        entry = e;
-        params = entryParams;
+    state = s;
+    priority = p;
     
-        context = c;
-        
-        deleted = 0;
-    }
+    entry = e;
+    params = entryParams;
+
+    context = c;
+    
+    deleted = 0;
+    sleepCount = 0;
+}
     
 TVMThreadID TCB::getThreadID() {
     return threadID;
 }
 TVMThreadIDRef TCB::getThreadIDRef() {
-        return &threadID;
+    return &threadID;
 }
 void TCB::setThreadID(TVMThreadID id) {
-        threadID = id;
+    threadID = id;
 }
     
 char* TCB::getStackPointer() {
@@ -51,10 +52,10 @@ void TCB::setStackSize(TVMMemorySize s) {
 
 
 TVMThreadEntry TCB::getTVMThreadEntry() {
-        return entry;
+    return entry;
 }
 void TCB::setTVMThreadEntry(TVMThreadEntry e) {
-        entry = e;
+    entry = e;
 }
 
 
@@ -69,18 +70,18 @@ void TCB::setParams(void* p) {
 
 
 TVMThreadState TCB::getTVMThreadState() {
-        return state;
+    return state;
 }
 void TCB::setTVMThreadState(TVMThreadState s) {
-        state = s;
+    state = s;
 }
     
     
 TVMThreadPriority TCB::getTVMThreadPriority() {
-        return priority;
+    return priority;
 }
 void TCB::setTVMThreadPriority(TVMThreadPriority p) {
-        priority = p;
+    priority = p;
 }
     
 SMachineContextRef TCB::getMachineContext() {
@@ -94,8 +95,22 @@ void TCB::setMachineContext(SMachineContext c) {
 
 
 int TCB::getDeleted() {
-        return deleted;
+    return deleted;
 }
 void TCB::setDeleted(int i) { // should only be used to mark as deleted because once deleted, would no longer access
-        deleted = i;
+    deleted = i;
 }
+
+
+int TCB::getSleepCount() {
+    return sleepCount;
+}
+
+void TCB::setSleepCount(int ticks) {
+    sleepCount = ticks;
+}
+
+void TCB::decrementSleepCount() {
+    sleepCount--;
+}
+
