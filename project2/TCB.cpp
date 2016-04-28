@@ -21,6 +21,8 @@ TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, 
     
     deleted = 0;
     sleepCount = 0;
+    fileCallbackStatus = 0;
+    machineFileFunctionResult = 0;
 }
     
 TVMThreadID TCB::getThreadID() {
@@ -113,4 +115,19 @@ void TCB::setSleepCount(int ticks) {
 void TCB::decrementSleepCount() {
     sleepCount--;
 }
+
+int TCB::getFileCallbackStatus() {
+    return fileCallbackStatus;
+}
+void TCB::setFileCallbackStatus(int status) {
+    fileCallbackStatus = status;
+}
+
+int TCB::getMachineFileFunctionResult() {
+    return machineFileFunctionResult;
+}
+void TCB::setMachineFileFunctionResult(int result) {
+    machineFileFunctionResult = result;
+}
+
 

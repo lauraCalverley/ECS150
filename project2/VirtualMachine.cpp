@@ -15,7 +15,7 @@ using namespace std;
 
 TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
-priority_queue<TCB*> readyQueue, waitingQueue;
+priority_queue<TCB*> readyQueue;
 
 //volatile int SLEEPCOUNT = 0; // eventually need a global queue of TCB's or thread SleepCount values
 int TICKMS;
@@ -34,7 +34,7 @@ void callbackMachineRequestAlarm(void *calldata);
 void callbackMachineFileOpen(void *calldata, int result);
 void callbackMachineFileSeek(void *calldata, int result);
 void callbackMachineFileRead(void *calldata, int result);
-void callbackMachineFileWrite(void *calldata, int result);
+void callbackMachineFileWrite(void* threadID, int result);
 void callbackMachineFileClose(void *calldata, int result);
 
 bool threadExists(TVMThreadID thread);
@@ -105,7 +105,7 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
 
 void idle(void* x)  {
 	while (true) {
-        cout << "in idle" << endl;
+        //cout << "in idle" << endl;
     }
     //cout << "in idle" << endl;
 }
@@ -116,9 +116,13 @@ void callbackMachineRequestAlarm(void *calldata) {
     for (int i=0; i < threadVector.size(); i++) { // IMPROVEMENT sleepVector idea
         if ((threadVector[i]->getDeleted() == 0) && (threadVector[i]->getSleepCount() > 0)) {
             threadVector[i]->decrementSleepCount();
+            
+            if (threadVector[i]->getSleepCount() == 0) {
+                Scheduler (1, i);
+            }
         }
     }
-    
+    Scheduler(3, CURRENT_THREAD);
 }
 
     
@@ -127,18 +131,16 @@ TVMStatus VMThreadSleep(TVMTick tick) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     else if (tick == VM_TIMEOUT_IMMEDIATE) {
-        threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_READY);
-        readyQueue.push(threadVector[CURRENT_THREAD]);
-        //Scheduler()
+        Scheduler(3, CURRENT_THREAD);
         return VM_STATUS_SUCCESS;
     }
     else {
         threadVector[CURRENT_THREAD]->setSleepCount(tick);
-        threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_WAITING);
-        waitingQueue.push(threadVector[CURRENT_THREAD]);
+        Scheduler(6, CURRENT_THREAD);
 
-        while (threadVector[CURRENT_THREAD]->getSleepCount() != 0) {}
-        // call Scheduler(); // ?
+        while (threadVector[CURRENT_THREAD]->getSleepCount() != 0) { // for debugging
+            cout << "this shouldn't ever print";
+        }
         return VM_STATUS_SUCCESS;
     }
 }
@@ -150,11 +152,19 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     
-    MachineFileWrite(filedescriptor, data, *length, callbackMachineFileWrite, length);
+    //MachineFileWrite(filedescriptor, data, *length, callbackMachineFileWrite, length);
+    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+    //MachineFileWrite(filedescriptor, data, *length, callbackMachineFileWrite, threadVector[savedCURRENTTHREAD]);
+    MachineFileWrite(filedescriptor, data, *length, callbackMachineFileWrite, &savedCURRENTTHREAD);
+    Scheduler(6,CURRENT_THREAD);
     
-    while (MACHINE_FILE_WRITE_STATUS != 1) {} // FIXME Multi When a thread calls VMFileRead() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful reading of the file is completed.
+    //while (threadVector[savedCURRENTTHREAD]->getFileCallbackStatus() != 1) {} // FIXME Multi When a thread calls VMFileRead() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful reading of the file is completed.
+    //while (threadVector[savedCURRENTTHREAD]->getTVMThreadState() != VM_THREAD_STATE_READY) {} // safeguard - remove later
+
+    *length = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
-    MACHINE_FILE_WRITE_STATUS = 0; // reset
+    //threadVector[savedCURRENTTHREAD]->setFileCallbackStatus(0);
+    //MACHINE_FILE_WRITE_STATUS = 0; // reset
     
     if (*length < 0) {
         return VM_STATUS_FAILURE;
@@ -164,9 +174,17 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     }
 }
 
-void callbackMachineFileWrite(void *calldata, int result) {
-    *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
-    MACHINE_FILE_WRITE_STATUS = 1;
+void callbackMachineFileWrite(void* threadID, int result) {
+    
+    cout << "IN callbackMachineFileWrite" << endl;
+
+    threadVector[*(int*)threadID]->setMachineFileFunctionResult(result);
+    Scheduler(1, threadVector[*(int*)threadID]->getThreadID());
+
+    cout << "RIGHT BEFORE LEAVING callbackMachineFileWrite" << endl;
+
+    //*((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
+    //MACHINE_FILE_WRITE_STATUS = 1;
 }
 
 
@@ -346,7 +364,7 @@ TVMStatus VMThreadActivate(TVMThreadID thread) {
     }
     else {
         MachineContextCreate(threadVector[thread]->getMachineContext(), entrySkeleton, threadVector[thread], threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
-        Scheduler(5, thread); //readyQueue.push(threadVector[thread]); //threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY); // FIXME ordering??
+        Scheduler(5, thread);
         return VM_STATUS_SUCCESS;
     }
 }
@@ -359,13 +377,7 @@ TVMStatus VMThreadTerminate(TVMThreadID thread) {
         return VM_STATUS_ERROR_INVALID_STATE;
     }
     else {
-        threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_DEAD);
-        CURRENT_THREAD = 0; // FIXME Scheduler()
-        MachineContextSwitch(threadVector[1]->getMachineContext(),threadVector[0]->getMachineContext()); // FIXME Scheduler()
-        //cout << "thread was terminated" << endl;
-        // Thread will still be in the ready or waiting queue, so we need to check the state in Scheduler()
-        // FIXME and must release any mutexes that it currently holds.
-        // FIXME??? Scheduling: The termination of a thread can trigger another thread to be scheduled.
+        Scheduler(4, thread);
         return VM_STATUS_SUCCESS;
     }
 }
@@ -386,8 +398,6 @@ bool threadExists(TVMThreadID thread) {
 }
     
 /*
-TVMStatus VMThreadSleep(TVMTick tick);
-
 TVMStatus VMMutexCreate(TVMMutexIDRef mutexref);
 TVMStatus VMMutexDelete(TVMMutexID mutex);
 TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref);
@@ -410,17 +420,22 @@ void Scheduler(int transition, TVMThreadID thread) {
     switch (transition) {
         case 1: { // I/O, acquire mutex or timeout
             // assume callbacks, etc. receive the TCB/TCB* of the thread that called the function associated with the callback
-            // pop waitingQueue??? OR pop mutexQueue          // have a sleepVector, mutexQueue
+            // pop mutexQueue          // have a sleepVector, mutexQueue
+            cout << "IN CASE 1" << endl;
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(threadVector[thread]);
 
             if (threadVector[thread]->getTVMThreadPriority() > threadVector[CURRENT_THREAD]->getTVMThreadPriority()) {
+                cout << "new thread is high priority than current thread" << endl;
                 Scheduler(3, thread);
             }
             break;
         }
         case 2: { // Scheduler selects process // Scheduler (2, CURRENT_THREAD)
+            cout << "IN CASE 2" << endl;
             TVMThreadID readyThread = readyQueue.top()->getThreadID();
+            //cout << "IN CASE 2: readyThread ID (1, 0) is " << readyThread << endl;
+            //cout << "IN CASE 2: thread ID (0, 1)is " << thread << endl;
             threadVector[readyThread]->setTVMThreadState(VM_THREAD_STATE_RUNNING);
             readyQueue.pop(); // DEBUG potentially
             CURRENT_THREAD = readyThread;
@@ -428,6 +443,7 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
         case 3: { // Process quantum up // only ever called by Scheduler(), in alarm callback, call Scheduler(2, NULL)
+            cout << "IN CASE 3" << endl;
             // thread parameter is the thread that is about to start running
             //  Each thread gets one quantum of time (one tick). They are then put in the ready state and scheduling is done, this means that the scheduler will need to be called in the alarm callback.
             threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_READY);
@@ -436,6 +452,7 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
         case 4: { // Process terminates
+            cout << "IN CASE 4" << endl;
             TVMThreadState oldThreadState = threadVector[thread]->getTVMThreadState();
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_DEAD);
 
@@ -469,6 +486,7 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
         case 5: { // Process activated
+            cout << "IN CASE 5" << endl;
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(threadVector[thread]);
             
@@ -479,6 +497,7 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
         case 6: { // Process blocks // Scheduler(6. CURRENT_THREAD)
+            cout << "IN CASE 6" << endl;
             // move the next 2 lines to the functions that cause something to go to waiting (mutex, file functions, VMThreadSleep)
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_WAITING);
             Scheduler(2, thread);
@@ -557,8 +576,8 @@ void Scheduler(int transition, TVMThreadID thread) {
 
 /*
  VMThreadSleep
- VMThreadCreate
- VMThreadState
- VMThreadActivate
+ ***VMThreadState - nothing
+ ***VMThreadCreate - nothing
+ ***VMThreadActivate
  VMPrint
  */
