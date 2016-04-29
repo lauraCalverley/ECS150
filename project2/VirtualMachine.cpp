@@ -11,24 +11,20 @@
 extern "C" {
 using namespace std;
 
+//global variables
 #define VM_THREAD_PRIORITY_IDLE                  ((TVMThreadPriority)0x00)
-
 TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
 priority_queue<TCB> readyQueue;
-
 int TICKMS;
 volatile int TICK_COUNT = 0;
 
+//function prototypes
 bool mutexExists(TVMMutexID id);
-
 TVMMainEntry VMLoadModule(const char *module);
-
 void idle(void* x);
-
 void callbackMachineRequestAlarm(void *calldata);
 void callbackMachineFile(void* threadID, int result);
-
 bool threadExists(TVMThreadID thread);
 void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
@@ -85,8 +81,9 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         
         MachineEnableSignals();
         module(argc, argv);
-        
-        // FIXME deallocate memory for TCBs and such
+
+        VMUnloadModule();
+
         //deallocate memory
         for(int i = 0; i < threadVector.size(); i++){
             delete[] threadVector[i]->getStackPointer();
@@ -704,12 +701,5 @@ void Scheduler(int transition, TVMThreadID thread) {
 }
     
     
-}
-
-/* To Do List
- // FIXME deallocate memory for TCBs and such
-test multiple threads waiting on the same mutex...i.e. mutex.waiting actually has something on it instead of just being an idealized priority queue
- 
- test the non-inf/imm case
- */
+}   
 
