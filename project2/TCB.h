@@ -28,7 +28,7 @@ public:
 
     TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c);
     
-    TVMThreadID getThreadID();
+    TVMThreadID getThreadID() const;
     TVMThreadIDRef getThreadIDRef();
     void setThreadID(TVMThreadID id);
     

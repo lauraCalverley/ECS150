@@ -25,7 +25,7 @@ TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, 
     machineFileFunctionResult = 0;
 }
     
-TVMThreadID TCB::getThreadID() {
+TVMThreadID TCB::getThreadID() const{
     return threadID;
 }
 TVMThreadIDRef TCB::getThreadIDRef() {
