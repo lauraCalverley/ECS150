@@ -87,6 +87,14 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
         module(argc, argv);
         
         // FIXME deallocate memory for TCBs and such
+        //deallocate memory
+        for(int i = 0; i < threadVector.size(); i++){
+            delete[] threadVector[i]->getStackPointer();
+            delete threadVector[i];
+        }
+        for(int i = 0; i < mutexVector.size(); i++){
+            delete mutexVector[i];
+        }
         
         return VM_STATUS_SUCCESS;
     }
