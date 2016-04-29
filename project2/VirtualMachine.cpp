@@ -35,21 +35,21 @@ void Scheduler(int transition, TVMThreadID thread);
 TVMStatus VMStart(int tickms, int argc, char *argv[]) {
     TICKMS = tickms;
     MachineInitialize();
-    MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL); // 2nd arg is a function pointer
+    MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL); 
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
         return VM_STATUS_FAILURE;
     }
     else {
         // create main TCB
-        SMachineContext mcntxMain; // placeholder: this will be assigned when context is switched
+        SMachineContext mcntxMain; 
         TVMThreadID mainTID = threadVector.size();
         TCB* mainThread = new TCB(mainTID, NULL, 0, VM_THREAD_STATE_RUNNING, VM_THREAD_PRIORITY_NORMAL, NULL, NULL, mcntxMain);
         threadVector.push_back(mainThread);
 
         // create idle thread and TCB; activate idle thread
         TVMThreadID idleTID;
-        VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
+        VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID);
         VMThreadActivate(idleTID);
         
         MachineEnableSignals();
@@ -110,8 +110,7 @@ void callbackMachineRequestAlarm(void *calldata) {
                 Scheduler (1, i);
             }
         }
-    }
-    
+    }    
     
     Scheduler(3, CURRENT_THREAD);
     MachineResumeSignals(&sigState);
@@ -276,6 +275,21 @@ TVMStatus VMFileClose(int filedescriptor) {
 
 
 //VM Thread functions
+bool threadExists(TVMThreadID thread) {
+    bool exists;
+    if (thread >= threadVector.size())
+    {
+        exists = 0;
+    }
+    else if (threadVector[thread]->getDeleted() == 1) {
+        exists = 0;
+    }
+    else {
+        exists = 1;
+    }
+    return exists;
+}
+
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -407,21 +421,6 @@ TVMStatus VMThreadTerminate(TVMThreadID thread) {
         return VM_STATUS_SUCCESS;
     }
 }
-    
-bool threadExists(TVMThreadID thread) {
-    bool exists;
-    if (thread >= threadVector.size())
-    {
-        exists = 0;
-    }
-    else if (threadVector[thread]->getDeleted() == 1) {
-        exists = 0;
-    }
-    else {
-        exists = 1;
-    }
-    return exists;
-}
 
 
 
@@ -467,7 +466,6 @@ TVMStatus VMMutexDelete(TVMMutexID mutex) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
     }
-
     if (mutexVector[mutex]->value == 1) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_STATE;
