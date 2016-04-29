@@ -16,7 +16,7 @@ class TCB {
     TVMThreadEntry entry;
 	void *params;
     
-    SMachineContext context;// this is a pointer
+    SMachineContext context;
     
     int deleted;
     volatile int sleepCount;

@@ -11,7 +11,6 @@ class Mutex {
 public:
     TVMMutexID id;
     bool value;
-    //TCB* owner;
     TVMThreadID owner;
     priority_queue<TCB> waiting;
     
