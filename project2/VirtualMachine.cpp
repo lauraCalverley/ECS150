@@ -15,6 +15,7 @@ using namespace std;
 #define VM_THREAD_PRIORITY_IDLE                  ((TVMThreadPriority)0x00)
 TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
+vector<Mutex*> mutexVector;
 priority_queue<TCB> readyQueue;
 int TICKMS;
 volatile int TICK_COUNT = 0;
@@ -30,35 +31,7 @@ void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
 
 
-TVMStatus VMTickMS(int *tickmsref) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-    if (tickmsref == NULL) {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }
-    else {
-        *tickmsref = TICKMS;
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
-}
 
-TVMStatus VMTickCount(TVMTickRef tickref) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-    if (tickref == NULL) {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }
-    else {
-        *tickref = TICK_COUNT;
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
-}
-    
-    
 TVMStatus VMStart(int tickms, int argc, char *argv[]) {
     TICKMS = tickms;
     MachineInitialize();
@@ -76,7 +49,7 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
 
         // create idle thread and TCB; activate idle thread
         TVMThreadID idleTID;
-		VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
+        VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID); // pushed back in VMThreadCreate
         VMThreadActivate(idleTID);
         
         MachineEnableSignals();
@@ -98,9 +71,21 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
 }
 
 void idle(void* x)  {
-	while (true) {}
+    while (true) {}
 }
 
+void entrySkeleton(void *thread) {
+    TCB* theThread = (TCB*)thread;
+    TVMThreadEntry entry = theThread->getTVMThreadEntry();
+    void* entryParams = theThread->getParams();
+    MachineEnableSignals();
+    entry(entryParams);
+    VMThreadTerminate(CURRENT_THREAD);
+}
+
+
+
+//Callback functions
 void callbackMachineRequestAlarm(void *calldata) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -132,30 +117,6 @@ void callbackMachineRequestAlarm(void *calldata) {
     MachineResumeSignals(&sigState);
 }
 
-    
-TVMStatus VMThreadSleep(TVMTick tick) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-
-    if (tick == VM_TIMEOUT_INFINITE) {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }
-    else if (tick == VM_TIMEOUT_IMMEDIATE) {
-        Scheduler(3, CURRENT_THREAD);
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
-    else {
-        threadVector[CURRENT_THREAD]->setSleepCount(tick);
-        Scheduler(6, CURRENT_THREAD);
-
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
-}
-
-
 void callbackMachineFile(void* threadID, int result) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -167,6 +128,38 @@ void callbackMachineFile(void* threadID, int result) {
 }
 
 
+
+//VM Tick functions
+TVMStatus VMTickMS(int *tickmsref) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    if (tickmsref == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        *tickmsref = TICKMS;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+}
+
+TVMStatus VMTickCount(TVMTickRef tickref) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    if (tickref == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        *tickref = TICK_COUNT;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+}
+
+
+//VM File functions
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -192,8 +185,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     }
 }
 
-
-
 TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -218,7 +209,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
     }
 }
 
-
 TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -238,7 +228,6 @@ TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset)
         return VM_STATUS_SUCCESS;
     }
 }
-
 
 TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
@@ -284,6 +273,9 @@ TVMStatus VMFileClose(int filedescriptor) {
     }
 }
 
+
+
+//VM Thread functions
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -317,6 +309,28 @@ TVMStatus VMThreadID(TVMThreadIDRef threadref) {
         MachineResumeSignals(&sigState);
 		return VM_STATUS_SUCCESS;
 	}
+}
+
+TVMStatus VMThreadSleep(TVMTick tick) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if (tick == VM_TIMEOUT_INFINITE) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else if (tick == VM_TIMEOUT_IMMEDIATE) {
+        Scheduler(3, CURRENT_THREAD);
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+    else {
+        threadVector[CURRENT_THREAD]->setSleepCount(tick);
+        Scheduler(6, CURRENT_THREAD);
+
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
 }
 
 TVMStatus VMThreadDelete(TVMThreadID thread) {
@@ -409,8 +423,9 @@ bool threadExists(TVMThreadID thread) {
     return exists;
 }
 
-vector<Mutex*> mutexVector;
-    
+
+
+//VM Mutex functions    
 bool mutexExists(TVMMutexID id) {
     bool exists;
     if (id >= mutexVector.size())
@@ -425,8 +440,6 @@ bool mutexExists(TVMMutexID id) {
     }
     return exists;
 }
-
-
 
 TVMStatus VMMutexCreate(TVMMutexIDRef mutexref) {
     TMachineSignalState sigState;
@@ -581,17 +594,9 @@ TVMStatus VMMutexRelease(TVMMutexID mutex) {
     return VM_STATUS_SUCCESS;
 }
 
-    
-void entrySkeleton(void *thread) {
-    TCB* theThread = (TCB*)thread;
-    TVMThreadEntry entry = theThread->getTVMThreadEntry();
-    void* entryParams = theThread->getParams();
-    MachineEnableSignals();
-    entry(entryParams);
-	VMThreadTerminate(CURRENT_THREAD);
-}
 
 
+//Scheduler
 void Scheduler(int transition, TVMThreadID thread) {
     
     switch (transition) {
@@ -698,8 +703,6 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
     }
-}
-    
-    
+}    
 }   
 
