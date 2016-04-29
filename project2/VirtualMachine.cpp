@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <unistd.h>
-#include <iostream> // temp?
 
 #include "VirtualMachine.h"
 #include "Machine.h"
 #include "TCB.h"
+#include "Mutex.h"
 #include <vector>
 #include <queue>
 
@@ -19,11 +19,8 @@ priority_queue<TCB> readyQueue;
 
 int TICKMS;
 volatile int TICK_COUNT = 0;
-volatile int MACHINE_FILE_OPEN_STATUS = 0;
-volatile int MACHINE_FILE_SEEK_STATUS = 0;
-volatile int MACHINE_FILE_READ_STATUS = 0;
-volatile int MACHINE_FILE_WRITE_STATUS = 0;
-volatile int MACHINE_FILE_CLOSE_STATUS = 0;
+
+bool mutexExists(TVMMutexID id);
 
 TVMMainEntry VMLoadModule(const char *module);
 
@@ -72,7 +69,7 @@ TVMStatus VMStart(int tickms, int argc, char *argv[]) {
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL); // 2nd arg is a function pointer
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
-        return VM_STATUS_FAILURE; // FIXME doesn't seem to match Nitta's error message
+        return VM_STATUS_FAILURE;
     }
     else {
         // create main TCB
@@ -105,7 +102,7 @@ void callbackMachineRequestAlarm(void *calldata) {
     
     TICK_COUNT++;
     
-    for (int i=0; i < threadVector.size(); i++) { // IMPROVEMENT sleepVector idea
+    for (int i=0; i < threadVector.size(); i++) {
         if ((threadVector[i]->getDeleted() == 0) && (threadVector[i]->getSleepCount() > 0)) {
             threadVector[i]->decrementSleepCount();
             
@@ -136,9 +133,6 @@ TVMStatus VMThreadSleep(TVMTick tick) {
         threadVector[CURRENT_THREAD]->setSleepCount(tick);
         Scheduler(6, CURRENT_THREAD);
 
-        while (threadVector[CURRENT_THREAD]->getSleepCount() != 0) { // for debugging
-            cout << "this shouldn't ever print";
-        }
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
@@ -277,28 +271,18 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     
-    /*if ((entry==NULL) || (tid==NULL)) {
-        cout << "";
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }*/
-    if (entry==NULL) {
-        cout << ""; //FIMXE cout issue - w/o, it seg faults // NITTA says there is a bigger issue with our stack and such
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }
-    if (tid==NULL) {
-        cout << ""; //FIMXE cout issuecle - w/o, it seg faults
+    if ((entry==NULL) || (tid==NULL)) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
-	char *stackPointer = new char[memsize];
+    char *stackPointer = new char[memsize];
 	SMachineContext mcntx;
     
     TVMThreadID newThreadID = threadVector.size();
     TCB* thread = new TCB(newThreadID, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
     threadVector.push_back(thread);
-    *tid = threadVector[newThreadID]->getThreadID(); // (OPTIONAL) FIXME: if id was later updated, don't think variable external to this function would be made aware of the change...
+    *tid = threadVector[newThreadID]->getThreadID();
     MachineResumeSignals(&sigState);
 	return VM_STATUS_SUCCESS;
     
@@ -407,21 +391,166 @@ bool threadExists(TVMThreadID thread) {
     }
     return exists;
 }
+
+vector<Mutex*> mutexVector;
     
-/*
-TVMStatus VMMutexCreate(TVMMutexIDRef mutexref);
-TVMStatus VMMutexDelete(TVMMutexID mutex);
-TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref);
-TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout);
-TVMStatus VMMutexRelease(TVMMutexID mutex);
-*/
+bool mutexExists(TVMMutexID id) {
+    bool exists;
+    if (id >= mutexVector.size())
+    {
+        exists = 0;
+    }
+    else if (mutexVector[id]->deleted == 1) {
+        exists = 0;
+    }
+    else {
+        exists = 1;
+    }
+    return exists;
+}
+
+
+
+TVMStatus VMMutexCreate(TVMMutexIDRef mutexref) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if (mutexref == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    TVMMutexID id = mutexVector.size();
+    Mutex* mymutex = new Mutex(id);
+    mutexVector.push_back(mymutex);
+    *mutexref = mutexVector[id]->id;
     
-//void entrySkeleton(TVMThreadEntry entry, void *params) { // FIXME???
-void entrySkeleton(void *thread) { // FIXME???
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_SUCCESS;
+    
+}
+
+TVMStatus VMMutexDelete(TVMMutexID mutex) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    if (!mutexExists(mutex)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+
+    if (mutexVector[mutex]->value == 1) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_STATE;
+    }
+    else {
+        mutexVector[mutex]->deleted = 1;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+    
+    
+    MachineResumeSignals(&sigState);
+}
+
+TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    if (!mutexExists(mutex)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+    if (ownerref == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+
+    if (mutexVector[mutex]->value == 1) { // mutex is unlocked
+        MachineResumeSignals(&sigState);
+        return VM_THREAD_ID_INVALID;
+    }
+    else {
+        *ownerref = mutexVector[mutex]->owner;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+}
+
+TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    if (!mutexExists(mutex)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+    
+    if (timeout == VM_TIMEOUT_IMMEDIATE) {
+        if (mutexVector[mutex]->value == 0) {
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_FAILURE;
+        }
+        else {
+            // gets the mutex
+            mutexVector[mutex]->owner = threadVector[CURRENT_THREAD]->getThreadID();
+            mutexVector[mutex]->value = 0;
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+    }
+    /*else if (timeout == VM_TIMEOUT_INFINITE) {
+        // FIXME deal with non immediate or infinite case???
+    }*/
+    else {
+        if (mutexVector[mutex]->value == 1) {
+            mutexVector[mutex]->owner = threadVector[CURRENT_THREAD]->getThreadID();
+            mutexVector[mutex]->value = 0;
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+        else {
+            mutexVector[mutex]->waiting.push(*threadVector[CURRENT_THREAD]);
+            Scheduler(6, CURRENT_THREAD);
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+    }
+}
+
+TVMStatus VMMutexRelease(TVMMutexID mutex) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    if (!mutexExists(mutex)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_ID;
+    }
+
+    if (mutexVector[mutex]->owner != threadVector[CURRENT_THREAD]->getThreadID()) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_STATE;
+    }
+    
+    if (!mutexVector[mutex]->waiting.empty()) {
+        mutexVector[mutex]->owner = mutexVector[mutex]->waiting.top().getThreadID();
+        mutexVector[mutex]->waiting.pop();
+        mutexVector[mutex]->value = 0;
+        Scheduler(1, mutexVector[mutex]->owner);
+    }
+    else {
+        mutexVector[mutex]->value = 1;
+    }
+    
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_SUCCESS;
+}
+
+    
+void entrySkeleton(void *thread) {
     TCB* theThread = (TCB*)thread;
     TVMThreadEntry entry = theThread->getTVMThreadEntry();
     void* entryParams = theThread->getParams();
-    MachineEnableSignals(); // temp // FIXME???
+    MachineEnableSignals();
     entry(entryParams);
 	VMThreadTerminate(CURRENT_THREAD);
 }
@@ -431,20 +560,15 @@ void Scheduler(int transition, TVMThreadID thread) {
     
     switch (transition) {
         case 1: { // I/O, acquire mutex or timeout
-            // assume callbacks, etc. receive the TCB/TCB* of the thread that called the function associated with the callback
-            // pop mutexQueue          // have a sleepVector, mutexQueue
-            //cout << "IN CASE 1" << endl;
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(*threadVector[thread]);
 
             if (threadVector[thread]->getTVMThreadPriority() > threadVector[CURRENT_THREAD]->getTVMThreadPriority()) {
-                //cout << "new thread is high priority than current thread" << endl;
                 Scheduler(3, thread);
             }
             break;
         }
         case 2: { // Scheduler selects process // Scheduler (2, CURRENT_THREAD)
-            //cout << "IN CASE 2" << endl;
             TVMThreadID readyThread = readyQueue.top().getThreadID();
             threadVector[readyThread]->setTVMThreadState(VM_THREAD_STATE_RUNNING);
             readyQueue.pop();
@@ -453,19 +577,47 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
         case 3: { // Process quantum up // only ever called by Scheduler(), in alarm callback, call Scheduler(2, NULL)
-            //cout << "IN CASE 3" << endl;
-            // thread parameter is the thread that is about to start running
-            //  Each thread gets one quantum of time (one tick). They are then put in the ready state and scheduling is done, this means that the scheduler will need to be called in the alarm callback.
             threadVector[CURRENT_THREAD]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(*threadVector[CURRENT_THREAD]);
             Scheduler(2, CURRENT_THREAD); // sort of loses track of thread that should be moved from ready to running, but easy to get with top() in case 2
             break;
         }
         case 4: { // Process terminates
-            //cout << "IN CASE 4" << endl;
             TVMThreadState oldThreadState = threadVector[thread]->getTVMThreadState();
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_DEAD);
 
+            for (int i=0; i < mutexVector.size(); i++) {
+                // check owner and waiters for each mutex to see if thread being terminated is owner or a waiter, if so: remove
+                if (mutexExists(i)) {
+                    if (thread == mutexVector[i]->owner) {
+                        if (!mutexVector[i]->waiting.empty()) {
+                            mutexVector[i]->owner = mutexVector[i]->waiting.top().getThreadID();
+                            mutexVector[i]->waiting.pop();
+                            mutexVector[i]->value = 0;
+                            Scheduler(1, mutexVector[i]->owner);
+                        }
+                        else {
+                            mutexVector[i]->value = 1;
+                        }
+                    }
+                    else {
+                        vector<TCB> tempMutexWaitingVector;
+                        
+                        // remove thread from mutex.waiting priority queue
+                        while (!mutexVector[i]->waiting.empty()) {
+                            TCB top = mutexVector[i]->waiting.top();
+                            if (top.getThreadID() != threadVector[thread]->getThreadID()) {
+                                tempMutexWaitingVector.push_back(top);
+                            }
+                            mutexVector[i]->waiting.pop();
+                        }
+                        for (int i=0; i < tempMutexWaitingVector.size(); i++) {
+                            mutexVector[i]->waiting.push(tempMutexWaitingVector[i]);
+                        }
+                    }
+                }
+            }
+            
             switch (oldThreadState) {
                 case VM_THREAD_STATE_RUNNING: {
                     Scheduler(2, thread);
@@ -488,15 +640,13 @@ void Scheduler(int transition, TVMThreadID thread) {
                     break;
                 }
                 case VM_THREAD_STATE_WAITING: {
-                    // deal mutext waiting queue
-                    // deal with sleep vector if we make one
+                    // nothing
                     break;
                 }
             }
             break;
         }
         case 5: { // Process activated
-            //cout << "IN CASE 5" << endl;
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
             readyQueue.push(*threadVector[thread]);
             
@@ -507,8 +657,6 @@ void Scheduler(int transition, TVMThreadID thread) {
             break;
         }
         case 6: { // Process blocks // Scheduler(6. CURRENT_THREAD)
-            //cout << "IN CASE 6" << endl;
-            // move the next 2 lines to the functions that cause something to go to waiting (mutex, file functions, VMThreadSleep)
             threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_WAITING);
             Scheduler(2, thread);
             break;
@@ -516,65 +664,12 @@ void Scheduler(int transition, TVMThreadID thread) {
     }
 }
     
-    // MCS occurs when you swap the Running threads
-    
-    // 3 4 and 6 all call 2
-    
-    // in VMThreadTerminate
-    // Thread will still be in the ready or waiting queue, so we need to check the state in Scheduler()
-
-    // 6 is waiting to acquire mutex successfully, waiting for I/O (i.e. a callback from one of the VMFile functions, or sleeping
-    // 1 is acquired mutex, got a/in a callback saying I/O was done, or no longer sleeping (SLEEPCOUNT for the thread = 0)
-    
-    // VMFile callback functions, VMThreadSleep, Mutex function callbacks(presumably) will call Scheduler(1);
-    // VMFile functions will call Scheduler(6); then Scheduler(2)
-    // VMThreadTerminate will call Scheduler(4); if terminated thread was RUNNING, call Scheduler(2);
-    //* VMThreadActivate will call Scheduler (5)
-    // MachineAlarmCallback will call Scheduler(3) and then Scheduler(2)
-    
-    
-    // Scheduler() will figure out what the next thread/context is (readyQueue top)
-    //change oldState
-    //change newState
-    //MCS()
-    
-/*
- Pseudocode for Scheduling Algorithm
- 
- So you call the machine function, your current thread blocks, and you switch to the next ready thread.
- * Once this other thread gets your callback, you will put the thread that was blocking in the ready state, and then check if its priority is higher than the current running thread.  if it is, then you switch threads. if its not then it stays in the ready state.
- 
-*/
     
 }
 
-
-
-/*
- Helpful things:
- ps aux | grep vm
- kill -9 <process_id>
-*/
-
-
 /* To Do List
- Scheduler()
- redo all VMFile* - call Scheduler(transition, threadthatisnolongerwaiting), need to pass the thread that is being worked on in the callback data, need to add a "waiting for callback" data member to the TCB class
- -- combine all the File callbacks into one
- -- in callback, save CURRENT_THREAD (because WILL change elsewhere while waiting)
- -- while (savedCurrentThread == WAITING)
- 
- -- in callback, set the thread it's passed (in callback data) to READY instead of WAITING
- 
- // suspend when you enter VMFunction
- // resume before you leave VMFunction
- 
- // signal stuff in all the functions, including callbacks
- enable signals right before you go into the entry
- 
- VMMutexCreate
- VMMutexDelete
- VMMutexQuery
- VMMutexAcquire
- VMMutexRelease
+- kill a ready thread (i.e. create idle, terminate idle, create idea all in VMStart
+ // FIXME deallocate memory for TCBs and such
+ fix the non-inf/imm case
  */
+

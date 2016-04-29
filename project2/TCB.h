@@ -24,7 +24,8 @@ class TCB {
     
 public:
     
-
+    TCB() {}
+    
     TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, TVMThreadPriority p, TVMThreadEntry e, void* entryParams, SMachineContext c);
     
     TVMThreadID getThreadID() const;
