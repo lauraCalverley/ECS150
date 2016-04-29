@@ -23,6 +23,7 @@ volatile int TICK_COUNT = 0;
 //function prototypes
 bool mutexExists(TVMMutexID id);
 TVMMainEntry VMLoadModule(const char *module);
+void VMUnloadModule(void);
 void idle(void* x);
 void callbackMachineRequestAlarm(void *calldata);
 void callbackMachineFile(void* threadID, int result);
