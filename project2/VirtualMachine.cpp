@@ -111,6 +111,18 @@ void callbackMachineRequestAlarm(void *calldata) {
             }
         }
     }
+
+    for (int i=0; i < threadVector.size(); i++) {
+        if ((threadVector[i]->getDeleted() == 0) && (threadVector[i]->getMutexWaitCount() > 0)) {
+            threadVector[i]->decrementMutexWaitCount();
+            
+            if (threadVector[i]->getMutexWaitCount() == 0) {
+                Scheduler (1, i);
+            }
+        }
+    }
+    
+    
     Scheduler(3, CURRENT_THREAD);
     MachineResumeSignals(&sigState);
 }
@@ -498,10 +510,7 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
             return VM_STATUS_SUCCESS;
         }
     }
-    /*else if (timeout == VM_TIMEOUT_INFINITE) {
-        // FIXME deal with non immediate or infinite case???
-    }*/
-    else {
+    else if (timeout == VM_TIMEOUT_INFINITE) {
         if (mutexVector[mutex]->value == 1) {
             mutexVector[mutex]->owner = threadVector[CURRENT_THREAD]->getThreadID();
             mutexVector[mutex]->value = 0;
@@ -513,6 +522,28 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
             Scheduler(6, CURRENT_THREAD);
             MachineResumeSignals(&sigState);
             return VM_STATUS_SUCCESS;
+        }
+    }
+    else {
+        if (mutexVector[mutex]->value == 1) {
+            mutexVector[mutex]->owner = threadVector[CURRENT_THREAD]->getThreadID();
+            mutexVector[mutex]->value = 0;
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+        else {
+            mutexVector[mutex]->waiting.push(*threadVector[CURRENT_THREAD]);
+            threadVector[CURRENT_THREAD]->setMutexWaitCount(timeout);
+            Scheduler(6, CURRENT_THREAD);
+            
+            if (mutexVector[mutex]->owner == CURRENT_THREAD) {
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_SUCCESS;
+            }
+            else {
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_FAILURE;
+            }
         }
     }
 }
@@ -668,8 +699,9 @@ void Scheduler(int transition, TVMThreadID thread) {
 }
 
 /* To Do List
-- kill a ready thread (i.e. create idle, terminate idle, create idea all in VMStart
  // FIXME deallocate memory for TCBs and such
- fix the non-inf/imm case
+test multiple threads waiting on the same mutex...i.e. mutex.waiting actually has something on it instead of just being an idealized priority queue
+ 
+ test the non-inf/imm case
  */
 

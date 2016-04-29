@@ -116,6 +116,18 @@ void TCB::decrementSleepCount() {
     sleepCount--;
 }
 
+int TCB::getMutexWaitCount() {
+    return mutexWaitCount;
+}
+
+void TCB::setMutexWaitCount(int ticks) {
+    mutexWaitCount = ticks;
+}
+
+void TCB::decrementMutexWaitCount() {
+    mutexWaitCount--;
+}
+
 int TCB::getMachineFileFunctionResult() {
     return machineFileFunctionResult;
 }

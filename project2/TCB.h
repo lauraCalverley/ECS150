@@ -20,6 +20,7 @@ class TCB {
     
     int deleted;
     volatile int sleepCount;
+    volatile int mutexWaitCount;
     int machineFileFunctionResult;
     
 public:
@@ -60,6 +61,10 @@ public:
     int getSleepCount();
     void setSleepCount(int ticks);
     void decrementSleepCount();
+    
+    int getMutexWaitCount();
+    void setMutexWaitCount(int ticks);
+    void decrementMutexWaitCount();
 
     int getFileCallbackStatus();
     void setFileCallbackStatus(int status);
