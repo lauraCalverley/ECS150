@@ -30,11 +30,7 @@ TVMMainEntry VMLoadModule(const char *module);
 void idle(void* x);
 
 void callbackMachineRequestAlarm(void *calldata);
-void callbackMachineFileOpen(void *calldata, int result);
-void callbackMachineFileSeek(void *calldata, int result);
-void callbackMachineFileRead(void *calldata, int result);
-void callbackMachineFileWrite(void* threadID, int result);
-void callbackMachineFileClose(void *calldata, int result);
+void callbackMachineFile(void* threadID, int result);
 
 bool threadExists(TVMThreadID thread);
 void entrySkeleton(void *thread);
@@ -42,21 +38,29 @@ void Scheduler(int transition, TVMThreadID thread);
 
 
 TVMStatus VMTickMS(int *tickmsref) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
     if (tickmsref == NULL) {
+        MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     else {
         *tickmsref = TICKMS;
+        MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
 }
 
 TVMStatus VMTickCount(TVMTickRef tickref) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
     if (tickref == NULL) {
+        MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     else {
         *tickref = TICK_COUNT;
+        MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
 }
@@ -141,6 +145,17 @@ TVMStatus VMThreadSleep(TVMTick tick) {
 }
 
 
+void callbackMachineFile(void* threadID, int result) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    threadVector[*(int*)threadID]->setMachineFileFunctionResult(result);
+    Scheduler(1, threadVector[*(int*)threadID]->getThreadID());
+    
+    MachineResumeSignals(&sigState);
+}
+
+
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -151,7 +166,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     }
     
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    MachineFileWrite(filedescriptor, data, *length, callbackMachineFileWrite, &savedCURRENTTHREAD);
+    MachineFileWrite(filedescriptor, data, *length, callbackMachineFile, &savedCURRENTTHREAD);
     Scheduler(6,CURRENT_THREAD);
     
     *length = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
@@ -166,15 +181,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     }
 }
 
-void callbackMachineFileWrite(void* threadID, int result) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-
-    threadVector[*(int*)threadID]->setMachineFileFunctionResult(result);
-    Scheduler(1, threadVector[*(int*)threadID]->getThreadID());
-
-    MachineResumeSignals(&sigState);
-}
 
 
 TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
@@ -185,13 +191,12 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
-    
-    MachineFileOpen(filename, flags, mode, callbackMachineFileOpen, filedescriptor);
-    // save the CURRENT_THREAD id
-    // while (threadVector[savedCURRENTTHREAD]->getState()==WAITING)
-    while (MACHINE_FILE_OPEN_STATUS != 1) {} // FIXME Multi When a thread calls VMFileOpen() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful opening of the file is completed.
-    MACHINE_FILE_OPEN_STATUS = 0; // reset
+    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+    MachineFileOpen(filename, flags, mode, callbackMachineFile, &savedCURRENTTHREAD);
+    Scheduler(6,CURRENT_THREAD);
 
+    *filedescriptor = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    
     if (*filedescriptor < 0) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_FAILURE;
@@ -202,25 +207,17 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
     }
 }
 
-void callbackMachineFileOpen(void *calldata, int result) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-
-    *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
-    MACHINE_FILE_OPEN_STATUS = 1;
-    MachineResumeSignals(&sigState);
-}
-
 
 TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
 
-    MachineFileSeek(filedescriptor, offset, whence, callbackMachineFileSeek, newoffset);
-    
-    while (MACHINE_FILE_SEEK_STATUS != 1) {} // FIXME Multi When a thread calls VMFileSeek() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful seeking in the file is completed.
-    MACHINE_FILE_SEEK_STATUS = 0; // reset
-    
+    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+    MachineFileSeek(filedescriptor, offset, whence, callbackMachineFile, &savedCURRENTTHREAD);
+    Scheduler(6,CURRENT_THREAD);
+
+    *newoffset = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+
     if (*newoffset < 0) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_FAILURE;
@@ -231,14 +228,6 @@ TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset)
     }
 }
 
-void callbackMachineFileSeek(void *calldata, int result) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-
-    *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
-    MACHINE_FILE_SEEK_STATUS = 1;
-    MachineResumeSignals(&sigState);
-}
 
 TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
@@ -248,11 +237,11 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
+    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+    MachineFileRead(filedescriptor, data, *length, callbackMachineFile, &savedCURRENTTHREAD);
+    Scheduler(6,CURRENT_THREAD);
     
-    MachineFileRead(filedescriptor, data, *length, callbackMachineFileRead, length);
-    
-    while (MACHINE_FILE_READ_STATUS != 1) {} // FIXME Multi When a thread calls VMFileRead() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful reading of the file is completed.
-    MACHINE_FILE_READ_STATUS = 0; // reset
+    *length = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
     if (*length < 0) {
         MachineResumeSignals(&sigState);
@@ -264,27 +253,16 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     }
 }
 
-void callbackMachineFileRead(void *calldata, int result) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-
-    *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
-    MACHINE_FILE_READ_STATUS = 1;
-    MachineResumeSignals(&sigState);
-}
-
 TVMStatus VMFileClose(int filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
 
-    int status = -1; // 0 is success, < 0 is failure
-    MachineFileClose(filedescriptor, callbackMachineFileClose, &status);
+    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+    MachineFileClose(filedescriptor, callbackMachineFile, &savedCURRENTTHREAD);
+    Scheduler(6,CURRENT_THREAD);
 
-    while (MACHINE_FILE_CLOSE_STATUS != 1) {} // FIXME Multi When a thread calls VMFileClose() it blocks in the wait state VM_THREAD_STATE_WAITING until the either successful or unsuccessful closing of the file is completed.
-
-    MACHINE_FILE_CLOSE_STATUS = 0; // reset
+    int status = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
-    //if (*status < 0) {
     if (status < 0) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_FAILURE;
@@ -293,15 +271,6 @@ TVMStatus VMFileClose(int filedescriptor) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
-}
-
-void callbackMachineFileClose(void *calldata, int result) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-
-    *((int*)calldata) = result; // SOURCE: http://stackoverflow.com/questions/1327579/if-i-have-a-void-pointer-how-do-i-put-an-int-into-it
-    MACHINE_FILE_CLOSE_STATUS = 1;
-    MachineResumeSignals(&sigState);
 }
 
 TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsize, TVMThreadPriority prio, TVMThreadIDRef tid) {
@@ -585,9 +554,7 @@ void Scheduler(int transition, TVMThreadID thread) {
  Helpful things:
  ps aux | grep vm
  kill -9 <process_id>
- *
- *  // @567 @630 @676 @716
- */
+*/
 
 
 /* To Do List

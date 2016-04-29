@@ -20,7 +20,6 @@ class TCB {
     
     int deleted;
     volatile int sleepCount;
-    volatile int fileCallbackStatus; // 0 is waiting, 1 is operation done
     int machineFileFunctionResult;
     
 public:
