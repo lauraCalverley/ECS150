@@ -452,7 +452,7 @@ TVMStatus VMMutexCreate(TVMMutexIDRef mutexref) {
     }
     TVMMutexID id = mutexVector.size();
     Mutex* mymutex = new Mutex(id);
-    mymutex->owner = threadVector[CURRENT_THREAD]->getThreadID();//test
+    //mymutex->owner = threadVector[CURRENT_THREAD]->getThreadID();//test
     //mymutex->value = 0; //test
     mutexVector.push_back(mymutex);
     *mutexref = mutexVector[id]->id;
@@ -500,7 +500,7 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
         MachineResumeSignals(&sigState);
         return VM_THREAD_ID_INVALID;
     }
-    
+
     if (ownerref == NULL) {
         cout << "ownerref is null" << endl;
         MachineResumeSignals(&sigState);
