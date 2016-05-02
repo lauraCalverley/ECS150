@@ -486,13 +486,13 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
 
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
-        return VM_STATUS_SUCCESS;
-    }
-
     if (!mutexExists(mutex)) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
+        return VM_STATUS_SUCCESS;
     }
 
     if (ownerref == NULL) {
