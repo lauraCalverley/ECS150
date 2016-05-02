@@ -7,6 +7,7 @@
 #include "Mutex.h"
 #include <vector>
 #include <queue>
+#include <iostream>
 
 extern "C" {
 using namespace std;
@@ -487,6 +488,7 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     
     if (!mutexExists(mutex)) {
         MachineResumeSignals(&sigState);
+        cout << "mutex doesn't exist" << endl;
         return VM_STATUS_ERROR_INVALID_ID;
     }
     if (ownerref == NULL) {
