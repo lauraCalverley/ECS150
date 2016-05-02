@@ -127,6 +127,7 @@ void VMMain(int argc, char *argv[]){
         return;
     }
     if(VM_STATUS_SUCCESS != VMMutexQuery(TheMutex, &MutexOwner)){
+        VMPrint("TheMutex inside VMMutexQuery: %d\n", TheMutex);
         VMPrint("VMMutexQuery doesn't handle valid inputs.\n");    
         return;
     }
