@@ -492,6 +492,7 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     }
 
     if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
+        cout << "dead" << endl;
         return VM_STATUS_SUCCESS;
     }
 
