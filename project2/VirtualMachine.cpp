@@ -523,12 +523,29 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_READY){
+        cout << "ready" << endl;
+        // MachineResumeSignals(&sigState);
+        // return VM_STATUS_SUCCESS;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_RUNNING){
+        cout << "running" << endl;
+        // MachineResumeSignals(&sigState);
+        // return VM_STATUS_SUCCESS;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_WAITING){
+        cout << "waiting" << endl;
+        // MachineResumeSignals(&sigState);
+        // return VM_STATUS_SUCCESS;
+    }
     
     if (timeout == VM_TIMEOUT_IMMEDIATE) {
         if (mutexVector[mutex]->value == 0) {
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
-            // return VM_STATUS_SUCCESS;
         }
         else {
             // gets the mutex
