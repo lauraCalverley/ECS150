@@ -514,6 +514,7 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
     MachineSuspendSignals(&sigState);
     
     if (!mutexExists(mutex)) {
+        cout << "mutex doesn't exist" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
     }
