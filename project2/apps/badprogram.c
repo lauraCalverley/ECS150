@@ -111,7 +111,7 @@ void VMMain(int argc, char *argv[]){
         VMPrint("VMMutexCreate doesn't handle valid inputs.\n");    
         return;
     }
-    VMPrint("TheMutex: %", TheMutex);
+    VMPrint("TheMutex: %d", TheMutex);
     BadMutexID = TheMutex + 16;
     VMPrint("VMMain VMMutexCreate appears OK.\n");
     VMPrint("VMMain testing VMMutexQuery.\n");
