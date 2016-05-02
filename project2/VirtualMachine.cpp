@@ -491,28 +491,6 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
         return VM_STATUS_ERROR_INVALID_ID;
     }
 
-    // cout << "owner state: " << threadVector[mutexVector[mutex]->owner]->getTVMThreadState() << endl;
-
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
-        cout << "dead" << endl;
-        // return VM_STATUS_SUCCESS;
-    }
-
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_READY){
-        cout << "ready" << endl;
-        // return VM_STATUS_SUCCESS;
-    }
-
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_RUNNING){
-        cout << "running" << endl;
-        // return VM_STATUS_SUCCESS;
-    }
-
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_WAITING){
-        cout << "waiting" << endl;
-        // return VM_STATUS_SUCCESS;
-    }
-
     if (ownerref == NULL) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
@@ -538,6 +516,12 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
     if (!mutexExists(mutex)) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
+        cout << "dead" << endl;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
     }
     
     if (timeout == VM_TIMEOUT_IMMEDIATE) {
