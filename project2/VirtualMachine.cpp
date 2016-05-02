@@ -452,8 +452,6 @@ TVMStatus VMMutexCreate(TVMMutexIDRef mutexref) {
     }
     TVMMutexID id = mutexVector.size();
     Mutex* mymutex = new Mutex(id);
-    //mymutex->owner = threadVector[CURRENT_THREAD]->getThreadID();//test
-    //mymutex->value = 0; //test
     mutexVector.push_back(mymutex);
     *mutexref = mutexVector[id]->id;
     
@@ -470,7 +468,7 @@ TVMStatus VMMutexDelete(TVMMutexID mutex) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
     }
-    if (mutexVector[mutex]->value == 1) {
+    if (mutexVector[mutex]->value != 1) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_STATE;
     }
