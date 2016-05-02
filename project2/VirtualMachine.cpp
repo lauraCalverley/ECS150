@@ -452,6 +452,7 @@ TVMStatus VMMutexCreate(TVMMutexIDRef mutexref) {
     }
     TVMMutexID id = mutexVector.size();
     Mutex* mymutex = new Mutex(id);
+    mymutex.owner = threadVector[CURRENT_THREAD]->getThreadID();//test
     mutexVector.push_back(mymutex);
     *mutexref = mutexVector[id]->id;
     
