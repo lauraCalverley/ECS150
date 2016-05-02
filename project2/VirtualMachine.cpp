@@ -500,7 +500,7 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     }
 
     if (mutexVector[mutex]->value == 1) { // mutex is unlocked
-        cout << "value: " << mutexVector[ownerref]->value << endl;
+        cout << "value: " << mutexVector[mutex]->value << endl;
         cout << "mutex is unlocked" << endl;
         MachineResumeSignals(&sigState);
         return VM_THREAD_ID_INVALID;
