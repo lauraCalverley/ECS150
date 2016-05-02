@@ -543,6 +543,11 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
     }
     
     if (timeout == VM_TIMEOUT_IMMEDIATE) {
+        if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
+        cout << "dead" << endl;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
         if (mutexVector[mutex]->value == 0) {
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
