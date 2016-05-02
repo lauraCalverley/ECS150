@@ -487,8 +487,6 @@ TVMStatus VMMutexDelete(TVMMutexID mutex) {
 TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-    
-    cout << "value: " << mutexVector[*ownerref]->value << endl;
 
     if (!mutexExists(mutex)) {
         MachineResumeSignals(&sigState);
@@ -502,6 +500,7 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     }
 
     if (mutexVector[mutex]->value == 1) { // mutex is unlocked
+        cout << "value: " << mutexVector[*ownerref]->value << endl;
         cout << "mutex is unlocked" << endl;
         MachineResumeSignals(&sigState);
         return VM_THREAD_ID_INVALID;
