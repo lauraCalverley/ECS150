@@ -488,7 +488,7 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     
     if (!mutexExists(mutex)) {
         MachineResumeSignals(&sigState);
-        cout << "mutex doesn't exist" << endl;
+        cout << "mutex: " << mutex << " doesn't exist" << endl;
         return VM_STATUS_ERROR_INVALID_ID;
     }
     if (ownerref == NULL) {
