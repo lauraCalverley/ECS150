@@ -488,6 +488,8 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     
+    cout << "value: " << mutexVector[*ownerref]->value << endl;
+
     if (!mutexExists(mutex)) {
         MachineResumeSignals(&sigState);
         cout << "mutex: " << mutex << " doesn't exist" << endl;
