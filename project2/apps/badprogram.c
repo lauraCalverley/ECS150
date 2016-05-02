@@ -121,7 +121,7 @@ void VMMain(int argc, char *argv[]){
         return;
     }
     if(VM_STATUS_ERROR_INVALID_ID != VMMutexQuery(BadMutexID, &MutexOwner)){
-        VMPrint("%s", VMMutexQuery(BadMutexID, &MutexOwner));
+        VMPrint("error: %s", VMMutexQuery(BadMutexID, &MutexOwner));
         VMPrint("VMMutexQuery doesn't handle bad mutex.\n");    
         return;
     }
