@@ -503,15 +503,16 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
     if (mutexVector[mutex]->value == 1) { // mutex is unlocked
         cout << "value: " << mutexVector[mutex]->value << endl;
         cout << "mutex is unlocked" << endl;
-        MachineResumeSignals(&sigState);
         *ownerref = VM_THREAD_ID_INVALID;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
     }
 
-    //else {
+    else {
         *ownerref = mutexVector[mutex]->owner;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
-    //}
+    }
 }
 
 TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
