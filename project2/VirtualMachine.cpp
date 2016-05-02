@@ -491,10 +491,25 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
         return VM_STATUS_ERROR_INVALID_ID;
     }
 
-    cout << "owner state: " << threadVector[mutexVector[mutex]->owner]->getTVMThreadState() << endl;
+    // cout << "owner state: " << threadVector[mutexVector[mutex]->owner]->getTVMThreadState() << endl;
 
     if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
         cout << "dead" << endl;
+        return VM_STATUS_SUCCESS;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_READY){
+        cout << "ready" << endl;
+        return VM_STATUS_SUCCESS;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_RUNNING){
+        cout << "running" << endl;
+        return VM_STATUS_SUCCESS;
+    }
+
+    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_WAITING){
+        cout << "waiting" << endl;
         return VM_STATUS_SUCCESS;
     }
 
