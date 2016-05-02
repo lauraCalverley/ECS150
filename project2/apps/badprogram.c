@@ -47,9 +47,7 @@ void VMMain(int argc, char *argv[]){
         VMPrint("VMThreadID doesn't handle valid threadref.\n");    
         return;
     }
-    VMPrint("ThreadId before: %d", ThisThreadID);
     BadThreadID = (OtherThreadID > ThisThreadID ? OtherThreadID : ThisThreadID) + 16;
-    VMPrint("ThreadId after: %d", ThisThreadID);
     VMPrint("VMMain VMThreadID appears OK.\n");
     VMPrint("VMMain testing VMThreadState.\n");
     if(VM_STATUS_ERROR_INVALID_PARAMETER != VMThreadState(OtherThreadID, NULL)){
@@ -121,12 +119,11 @@ void VMMain(int argc, char *argv[]){
         return;
     }
     if(VM_STATUS_ERROR_INVALID_ID != VMMutexQuery(BadMutexID, &MutexOwner)){
-        VMPrint("error: %s", VMMutexQuery(BadMutexID, &MutexOwner));
         VMPrint("VMMutexQuery doesn't handle bad mutex.\n");    
         return;
     }
     if(VM_STATUS_SUCCESS != VMMutexQuery(TheMutex, &MutexOwner)){
-        VMPrint("TheMutex inside VMMutexQuery: %d\n", TheMutex);
+        if(&MutexOwner == NULL) VMPrint("null mutex owner\n");
         VMPrint("VMMutexQuery doesn't handle valid inputs.\n");    
         return;
     }
