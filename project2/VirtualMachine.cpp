@@ -507,11 +507,11 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
         *ownerref = VM_THREAD_ID_INVALID;
     }
 
-    else {
+    //else {
         *ownerref = mutexVector[mutex]->owner;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
-    }
+    //}
 }
 
 TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
