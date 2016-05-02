@@ -493,11 +493,6 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
         cout << "mutex: " << mutex << " doesn't exist" << endl;
         return VM_STATUS_ERROR_INVALID_ID;
     }
-    if (ownerref == NULL) {
-        cout << "ownerref is null" << endl;
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_ERROR_INVALID_PARAMETER;
-    }
 
     if (mutexVector[mutex]->value == 1) { // mutex is unlocked
         cout << "value: " << mutexVector[mutex]->value << endl;
@@ -505,6 +500,13 @@ TVMStatus VMMutexQuery(TVMMutexID mutex, TVMThreadIDRef ownerref) {
         MachineResumeSignals(&sigState);
         return VM_THREAD_ID_INVALID;
     }
+    
+    if (ownerref == NULL) {
+        cout << "ownerref is null" << endl;
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+
     else {
         *ownerref = mutexVector[mutex]->owner;
         MachineResumeSignals(&sigState);
