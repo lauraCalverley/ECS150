@@ -113,9 +113,7 @@ void VMMain(int argc, char *argv[]){
         VMPrint("VMMutexCreate doesn't handle valid inputs.\n");    
         return;
     }
-    VMPrint("TheMutex before: %d", TheMutex);
     BadMutexID = TheMutex + 16;
-    VMPrint("TheMutex after: %d", TheMutex);
     VMPrint("VMMain VMMutexCreate appears OK.\n");
     VMPrint("VMMain testing VMMutexQuery.\n");
     if(VM_STATUS_ERROR_INVALID_PARAMETER != VMMutexQuery(TheMutex, NULL)){
@@ -123,6 +121,7 @@ void VMMain(int argc, char *argv[]){
         return;
     }
     if(VM_STATUS_ERROR_INVALID_ID != VMMutexQuery(BadMutexID, &MutexOwner)){
+        VMPrint("%s", VMMutexQueryBadMutexID, &MutexOwner);
         VMPrint("VMMutexQuery doesn't handle bad mutex.\n");    
         return;
     }
