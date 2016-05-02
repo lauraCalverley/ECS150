@@ -518,36 +518,31 @@ TVMStatus VMMutexAcquire(TVMMutexID mutex, TVMTick timeout) {
         return VM_STATUS_ERROR_INVALID_ID;
     }
 
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
-        cout << "dead" << endl;
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
+    // if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
+    //     cout << "dead" << endl;
+    //     MachineResumeSignals(&sigState);
+    //     return VM_STATUS_SUCCESS;
+    // }
 
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_READY){
-        cout << "ready" << endl;
-        // MachineResumeSignals(&sigState);
-        // return VM_STATUS_SUCCESS;
-    }
+    // if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_READY){
+    //     cout << "ready" << endl;
+    //     // MachineResumeSignals(&sigState);
+    //     // return VM_STATUS_SUCCESS;
+    // }
 
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_RUNNING){
-        cout << "running" << endl;
-        // MachineResumeSignals(&sigState);
-        // return VM_STATUS_SUCCESS;
-    }
+    // if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_RUNNING){
+    //     cout << "running" << endl;
+    //     // MachineResumeSignals(&sigState);
+    //     // return VM_STATUS_SUCCESS;
+    // }
 
-    if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_WAITING){
-        cout << "waiting" << endl;
-        // MachineResumeSignals(&sigState);
-        // return VM_STATUS_SUCCESS;
-    }
+    // if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_WAITING){
+    //     cout << "waiting" << endl;
+    //     // MachineResumeSignals(&sigState);
+    //     // return VM_STATUS_SUCCESS;
+    // }
     
     if (timeout == VM_TIMEOUT_IMMEDIATE) {
-        if(threadVector[mutexVector[mutex]->owner]->getTVMThreadState() == VM_THREAD_STATE_DEAD){
-        cout << "dead" << endl;
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
         if (mutexVector[mutex]->value == 0) {
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
