@@ -42,9 +42,11 @@ TVMStatus VMFilePrint(int filedescriptor, const char *format, ...){
         return ReturnValue;
     }
     OutputBuffer = (char *)malloc(sizeof(char) *(SizeRequired + 1));
-    SizeRequired = vsnprintf(OutputBuffer, SizeRequired, format, ParamList);
+    va_start(ParamList, format);
+    SizeRequired = vsnprintf(OutputBuffer, SizeRequired + 1, format, ParamList);
     ReturnValue = VMFileWrite(filedescriptor, OutputBuffer, &SizeRequired);
     free(OutputBuffer);
     return ReturnValue;
 }
+
 
