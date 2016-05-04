@@ -32,10 +32,10 @@ TVMStatus VMFilePrint(int filedescriptor, const char *format, ...){
     char SmallBuffer[SMALL_BUFFER_SIZE];
     int SizeRequired;
     TVMStatus ReturnValue;
-
+    
     va_start(ParamList, format);
     OutputBuffer = SmallBuffer;
-
+    
     SizeRequired = vsnprintf(OutputBuffer, SMALL_BUFFER_SIZE, format, ParamList);
     if(SizeRequired < SMALL_BUFFER_SIZE){
         ReturnValue = VMFileWrite(filedescriptor, OutputBuffer, &SizeRequired);
@@ -48,5 +48,4 @@ TVMStatus VMFilePrint(int filedescriptor, const char *format, ...){
     free(OutputBuffer);
     return ReturnValue;
 }
-
 
