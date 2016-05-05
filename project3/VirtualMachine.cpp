@@ -187,29 +187,25 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     
     while (*length != 0) {
         if(*length > 512) {
-            writeLength = *length % 512;
+            writeLength = 512;
         }
         else {
             writeLength = *length;
         }
-        //cout << writeLength << endl;
         MachineFileWrite(filedescriptor, sharedMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
+
+        if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() != writeLength) {
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_FAILURE;
+        }
+        
         *length -= writeLength;
         sharedMemory = sharedMemory + writeLength;
     }
-    
 
-    *length = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
-    
-    if (*length < 0) {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_FAILURE;
-    }
-    else {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_SUCCESS;
 }
 
 TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
