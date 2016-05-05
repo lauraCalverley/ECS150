@@ -8,6 +8,8 @@
 #include <vector>
 #include <queue>
 
+#include <iostream> // temp
+
 extern "C" {
 using namespace std;
 
@@ -19,6 +21,8 @@ vector<Mutex*> mutexVector;
 priority_queue<TCB> readyQueue;
 int TICKMS;
 volatile int TICK_COUNT = 0;
+char *BASE_ADDRESS = NULL;
+TVMMemorySize SHARED_MEMORY_SIZE = 0;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -31,12 +35,14 @@ bool threadExists(TVMThreadID thread);
 void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
 
-
-
-TVMStatus VMStart(int tickms, int argc, char *argv[]) {
+TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, int argc, char *argv[]) {
     TICKMS = tickms;
-    MachineInitialize();
-    MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL); 
+    
+    // Upon successful initialization MachineInitialize returns the base address of the shared memory. NULL is returned if the machine has already been initialized. If the memory queues or shared memory fail to be allocated the program exits.
+    BASE_ADDRESS = (char*)MachineInitialize(sharedsize); // FIXME - char* ??? // FIXME - check for NULL? then what?
+    SHARED_MEMORY_SIZE = sharedsize;
+    
+    MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
         return VM_STATUS_FAILURE;
@@ -118,6 +124,7 @@ void callbackMachineRequestAlarm(void *calldata) {
 }
 
 void callbackMachineFile(void* threadID, int result) {
+    
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     
@@ -161,8 +168,11 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
 
 //VM File functions
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
+    //cout << "IN VMFileWrite" << endl;
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
+    
+    //cout << "length: " << *length << endl;
 
     if ((data==NULL) || (length==NULL)) {
         MachineResumeSignals(&sigState);
@@ -170,9 +180,26 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     }
     
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    MachineFileWrite(filedescriptor, data, *length, callbackMachineFile, &savedCURRENTTHREAD);
-    Scheduler(6,CURRENT_THREAD);
     
+    char *sharedMemory = BASE_ADDRESS;
+    strncpy(sharedMemory, (const char *)data, *length);    
+    int writeLength;
+    
+    while (*length != 0) {
+        if(*length > 512) {
+            writeLength = *length % 512;
+        }
+        else {
+            writeLength = *length;
+        }
+        //cout << writeLength << endl;
+        MachineFileWrite(filedescriptor, sharedMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
+        Scheduler(6,CURRENT_THREAD);
+        *length -= writeLength;
+        sharedMemory = sharedMemory + writeLength;
+    }
+    
+
     *length = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
     if (*length < 0) {
