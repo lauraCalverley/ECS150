@@ -182,6 +182,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     char *sharedMemory = BASE_ADDRESS;
     strncpy(sharedMemory, (const char *)data, *length);    
     int writeLength;
+    int cumLength = 0;
     
     while (*length != 0) {
         if(*length > 512) {
@@ -193,15 +194,18 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         MachineFileWrite(filedescriptor, sharedMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
 
-        if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() != writeLength) {
+        if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
-        
+        cumLength += threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+
         *length -= writeLength;
         sharedMemory = sharedMemory + writeLength;
     }
 
+    *length = cumLength;
+    
     MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
 }
@@ -259,19 +263,38 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    MachineFileRead(filedescriptor, data, *length, callbackMachineFile, &savedCURRENTTHREAD);
-    Scheduler(6,CURRENT_THREAD);
     
-    *length = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    char *sharedMemory = BASE_ADDRESS;
+    int readLength;
+    int cumLength = 0;
     
-    if (*length < 0) {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_FAILURE;
+    while (*length != 0) {
+        if(*length > 512) {
+            readLength = 512;
+        }
+        else {
+            readLength = *length;
+        }
+        MachineFileRead(filedescriptor, sharedMemory, readLength, callbackMachineFile, &savedCURRENTTHREAD);
+        Scheduler(6,CURRENT_THREAD);
+        
+        int resultLength = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+        
+        if (resultLength < 0) {
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_FAILURE;
+        }
+        strncpy((char*)data, sharedMemory, resultLength);
+        cumLength += resultLength;
+        *length -= readLength;
+        sharedMemory = sharedMemory + readLength;
+        data = (char*)data + readLength;
     }
-    else {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
+    
+    *length = cumLength;
+    
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_SUCCESS;
 }
 
 TVMStatus VMFileClose(int filedescriptor) {
