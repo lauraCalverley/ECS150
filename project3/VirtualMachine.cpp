@@ -23,6 +23,10 @@ int TICKMS;
 volatile int TICK_COUNT = 0;
 char *BASE_ADDRESS = NULL;
 TVMMemorySize SHARED_MEMORY_SIZE = 0;
+char *HEAP_BASE = NULL;
+TVMMemorySize HEAP_BASE_SIZE = 0;
+
+    
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -39,8 +43,13 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     TICKMS = tickms;
     
     // Upon successful initialization MachineInitialize returns the base address of the shared memory. NULL is returned if the machine has already been initialized. If the memory queues or shared memory fail to be allocated the program exits.
-    BASE_ADDRESS = (char*)MachineInitialize(sharedsize); // FIXME - char* ??? // FIXME - check for NULL? then what?
     SHARED_MEMORY_SIZE = sharedsize;
+    BASE_ADDRESS = (char*)MachineInitialize(SHARED_MEMORY_SIZE); // FIXME - char* ??? // FIXME - check for NULL? then what?
+    
+    HEAP_BASE_SIZE = heapsize;
+    HEAP_BASE = new char[HEAP_BASE_SIZE];
+    
+    VMMemoryPoolCreate(HEAP_BASE, HEAP_BASE_SIZE, &VM_MEMORY_POOL_ID_SYSTEM);
     
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
