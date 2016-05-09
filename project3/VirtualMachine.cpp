@@ -123,7 +123,6 @@ bool memoryPoolExists(TVMMemoryPoolID memPoolID) {
 }
     
     
-    
 TVMStatus VMMemoryPoolCreate(void *base, TVMMemorySize size, TVMMemoryPoolIDRef memory) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -158,11 +157,58 @@ TVMStatus VMMemoryPoolQuery(TVMMemoryPoolID memory, TVMMemorySizeRef bytesleft) 
     return VM_STATUS_SUCCESS;
 }
 
+TVMStatus VMMemoryPoolAllocate(TVMMemoryPoolID memory, TVMMemorySize size, void **pointer) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
     
+    if ((!memoryPoolExists(memory)) || (size == 0) || (pointer == NULL)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    
+    TVMMemorySize roundedSize;
+    if ((size % 64) != 0) {
+        roundedSize = ((size / 64) + 1) * 64;
+    }
+    else {
+        roundedSize = size;
+    }
+    
+    char* memoryLocation = memoryPoolVector[memory]->allocate(roundedSize);
+    if (memoryLocation == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INSUFFICIENT_RESOURCES;
+    }
+    else {
+        *pointer = memoryLocation; // FIXME??
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+}
+
+TVMStatus VMMemoryPoolDeallocate(TVMMemoryPoolID memory, void *pointer) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if ((!memoryPoolExists(memory)) || (pointer == NULL)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    
+    char *deallocatedLocation = memoryPoolVector[memory]->deallocate((char*)pointer);
+    
+    if (deallocatedLocation == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+}
+
 /*
  TVMStatus VMMemoryPoolDelete(TVMMemoryPoolID memory);
- TVMStatus VMMemoryPoolAllocate(TVMMemoryPoolID memory, TVMMemorySize size, void **pointer);
- TVMStatus VMMemoryPoolDeallocate(TVMMemoryPoolID memory, void *pointer);
  */
 
 

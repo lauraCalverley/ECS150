@@ -15,6 +15,7 @@ class MemoryPool {
     TVMMemorySize size;
     char *start;
     std::list<MemCell*> freeList; // FIXME - use new
+    std::list<MemCell*> allocatedList; // FIXME - use new
     bool deleted;
     
 public:
@@ -24,6 +25,9 @@ public:
     TVMMemorySize bytesLeft();
     int getDeleted();
     void setDeleted(int i=1);
+
+    char* allocate(TVMMemorySize roundedSize);
+    char* deallocate(char *pointer);
 
 };
 
