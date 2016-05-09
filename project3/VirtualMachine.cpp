@@ -5,6 +5,7 @@
 #include "Machine.h"
 #include "TCB.h"
 #include "Mutex.h"
+#include "MemoryPool.h"
 #include <vector>
 #include <queue>
 
@@ -19,13 +20,13 @@ TVMThreadID CURRENT_THREAD = 0;
 vector<TCB*> threadVector;
 vector<Mutex*> mutexVector;
 priority_queue<TCB> readyQueue;
+vector<MemoryPool*> memoryPoolVector;
 int TICKMS;
 volatile int TICK_COUNT = 0;
 char *BASE_ADDRESS = NULL;
 TVMMemorySize SHARED_MEMORY_SIZE = 0;
 char *HEAP_BASE = NULL;
 TVMMemorySize HEAP_BASE_SIZE = 0;
-
     
 
 //function prototypes
@@ -49,8 +50,10 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     HEAP_BASE_SIZE = heapsize;
     HEAP_BASE = new char[HEAP_BASE_SIZE];
     
-    VMMemoryPoolCreate(HEAP_BASE, HEAP_BASE_SIZE, &VM_MEMORY_POOL_ID_SYSTEM);
-    
+    TVMMemoryPoolID systemPoolID; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
+    VMMemoryPoolCreate(HEAP_BASE, HEAP_BASE_SIZE, &systemPoolID);
+    const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = systemPoolID; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
+
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
@@ -81,6 +84,9 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         for(int i = 0; i < mutexVector.size(); i++){
             delete mutexVector[i];
         }
+        for(int i = 0; i < memoryPoolVector.size(); i++){
+            delete memoryPoolVector[i];
+        }
         
         return VM_STATUS_SUCCESS;
     }
@@ -99,6 +105,65 @@ void entrySkeleton(void *thread) {
     VMThreadTerminate(CURRENT_THREAD);
 }
 
+
+//MemoryPool functions
+bool memoryPoolExists(TVMMemoryPoolID memPoolID) {
+    bool exists;
+    if (memPoolID >= memoryPoolVector.size())
+    {
+        exists = 0;
+    }
+    else if (memoryPoolVector[memPoolID]->getDeleted() == 1) {
+        exists = 0;
+    }
+    else {
+        exists = 1;
+    }
+    return exists;
+}
+    
+    
+    
+TVMStatus VMMemoryPoolCreate(void *base, TVMMemorySize size, TVMMemoryPoolIDRef memory) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    if ((base == NULL) || (memory == NULL) || (size == 0)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    
+    TVMMemoryPoolID memoryID = memoryPoolVector.size();
+    
+    MemoryPool* memPool = new MemoryPool(base, size, &memoryID);
+    memoryPoolVector.push_back(memPool);
+    *memory = memoryPoolVector[memoryID]->getMemoryPoolID();
+
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_SUCCESS;
+}
+    
+TVMStatus VMMemoryPoolQuery(TVMMemoryPoolID memory, TVMMemorySizeRef bytesleft) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if ((!memoryPoolExists(memory)) || (bytesleft == NULL)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    
+    *bytesleft = memoryPoolVector[memory]->bytesLeft();
+    
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_SUCCESS;
+}
+
+    
+/*
+ TVMStatus VMMemoryPoolDelete(TVMMemoryPoolID memory);
+ TVMStatus VMMemoryPoolAllocate(TVMMemoryPoolID memory, TVMMemorySize size, void **pointer);
+ TVMStatus VMMemoryPoolDeallocate(TVMMemoryPoolID memory, void *pointer);
+ */
 
 
 //Callback functions

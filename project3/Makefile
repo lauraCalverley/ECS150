@@ -17,6 +17,7 @@ OBJS=$(OBJDIR)/Machine.o \
      $(OBJDIR)/VirtualMachine.o \
      $(OBJDIR)/TCB.o \
      $(OBJDIR)/Mutex.o \
+     $(OBJDIR)/MemoryPool.o \
      $(OBJDIR)/main.o
 
 MODOBJS=$(OBJDIR)/module.o
