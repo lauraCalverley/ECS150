@@ -27,7 +27,8 @@ char *BASE_ADDRESS = NULL;
 TVMMemorySize SHARED_MEMORY_SIZE = 0;
 char *HEAP_BASE = NULL;
 TVMMemorySize HEAP_BASE_SIZE = 0;
-    
+const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
+
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -50,9 +51,9 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     HEAP_BASE_SIZE = heapsize;
     HEAP_BASE = new char[HEAP_BASE_SIZE];
     
-    TVMMemoryPoolID systemPoolID; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
+    TVMMemoryPoolID systemPoolID = 0; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
     VMMemoryPoolCreate(HEAP_BASE, HEAP_BASE_SIZE, &systemPoolID);
-    const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = systemPoolID; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
+    //const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = systemPoolID; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
 
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
@@ -207,9 +208,27 @@ TVMStatus VMMemoryPoolDeallocate(TVMMemoryPoolID memory, void *pointer) {
     }
 }
 
-/*
- TVMStatus VMMemoryPoolDelete(TVMMemoryPoolID memory);
- */
+
+TVMStatus VMMemoryPoolDelete(TVMMemoryPoolID memory) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if (!memoryPoolExists(memory)) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    
+    if (memoryPoolVector[memory]->getAllocatedListSize() == 0) {
+        memoryPoolVector[memory]->setDeleted();
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
+    else {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_STATE;
+    }
+
+}
 
 
 //Callback functions
@@ -288,7 +307,6 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
 
 //VM File functions
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
-    //cout << "IN VMFileWrite" << endl;
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     

@@ -151,7 +151,9 @@ char* MemoryPool::deallocate(char *pointer) {
 }
 
 
-
+int MemoryPool::getAllocatedListSize() {
+    return allocatedList.size();
+}
 
 
 
