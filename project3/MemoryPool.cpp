@@ -65,7 +65,7 @@ void MemoryPool::setDeleted(int i) {
 
 char* MemoryPool::allocate(TVMMemorySize roundedSize) {
     for (list<MemCell*>::iterator it=freeList.begin(); it != freeList.end(); it++) {
-        if ((*it)->cellSize >= size) {
+        if ((*it)->cellSize >= roundedSize) {
 
             //creates cell for allocatedList
             MemCell* cell = new MemCell;
@@ -73,11 +73,17 @@ char* MemoryPool::allocate(TVMMemorySize roundedSize) {
             cell->cellSize = roundedSize;
             allocatedList.push_back(cell);
             
-            //adjusts cell in freeList
+            // check for other cases: entire free cell is allocated
             char *locationStart = (*it)->cellStart;
-            (*it)->cellStart += roundedSize;
-            (*it)->cellSize -= roundedSize;
-
+            if ((*it)->cellSize != roundedSize) {
+                //adjusts cell in freeList
+                (*it)->cellStart += roundedSize;
+                (*it)->cellSize -= roundedSize;
+            }
+            else {
+                freeList.erase(it);
+            }
+            
             return locationStart;
         }
     }
@@ -88,9 +94,14 @@ char* MemoryPool::allocate(TVMMemorySize roundedSize) {
 char* MemoryPool::deallocate(char *pointer) {
     for (list<MemCell*>::iterator it=allocatedList.begin(); it != allocatedList.end(); it++) {
         if ((*it)->cellStart == pointer) { // 'it' is the cell to deallocate
-            list<MemCell*>::iterator target = it;
 
-            if ((pointer < (*freeList.begin())->cellStart) && (pointer + (*target)->cellSize) == (*freeList.begin())->cellStart) {
+            list<MemCell*>::iterator target = it;
+            
+            if (freeList.size() == 0) {
+                freeList.push_front(*target);
+            }
+            
+            if ((pointer < (*freeList.begin())->cellStart) && ((pointer + (*target)->cellSize) == (*freeList.begin())->cellStart)) {
                 // combine with freeList.begin() after pointer's cell
                 (*freeList.begin())->cellStart = pointer;
                 (*freeList.begin())->cellSize += (*target)->cellSize;
@@ -100,6 +111,7 @@ char* MemoryPool::deallocate(char *pointer) {
                 freeList.push_front(*target);
             }
             
+
             
             list<MemCell*>::iterator myEnd = freeList.end();
             myEnd--;

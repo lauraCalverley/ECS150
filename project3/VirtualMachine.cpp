@@ -28,6 +28,7 @@ TVMMemorySize SHARED_MEMORY_SIZE = 0;
 char *HEAP_BASE = NULL;
 TVMMemorySize HEAP_BASE_SIZE = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
+const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 
 
 //function prototypes
@@ -43,17 +44,18 @@ void Scheduler(int transition, TVMThreadID thread);
 
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, int argc, char *argv[]) {
     TICKMS = tickms;
-    
-    // Upon successful initialization MachineInitialize returns the base address of the shared memory. NULL is returned if the machine has already been initialized. If the memory queues or shared memory fail to be allocated the program exits.
-    SHARED_MEMORY_SIZE = sharedsize;
-    BASE_ADDRESS = (char*)MachineInitialize(SHARED_MEMORY_SIZE); // FIXME - char* ??? // FIXME - check for NULL? then what?
-    
+
     HEAP_BASE_SIZE = heapsize;
     HEAP_BASE = new char[HEAP_BASE_SIZE];
     
     TVMMemoryPoolID systemPoolID = 0; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
     VMMemoryPoolCreate(HEAP_BASE, HEAP_BASE_SIZE, &systemPoolID);
     //const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = systemPoolID; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
+    
+    SHARED_MEMORY_SIZE = sharedsize;
+    BASE_ADDRESS = (char*)MachineInitialize(SHARED_MEMORY_SIZE); // FIXME - char* ??? // FIXME - check for NULL? then what?
+    TVMMemoryPoolID sharedMemoryPoolID = 1; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
+    VMMemoryPoolCreate(BASE_ADDRESS, SHARED_MEMORY_SIZE, &sharedMemoryPoolID);
 
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
@@ -69,7 +71,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
 
         // create idle thread and TCB; activate idle thread
         TVMThreadID idleTID;
-        VMThreadCreate(idle, NULL, 0x10000, VM_THREAD_PRIORITY_IDLE, &idleTID);
+        VMThreadCreate(idle, NULL, 0x100000, VM_THREAD_PRIORITY_IDLE, &idleTID);
         VMThreadActivate(idleTID);
         
         MachineEnableSignals();
@@ -79,7 +81,6 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
 
         //deallocate memory
         for(int i = 0; i < threadVector.size(); i++){
-            delete[] threadVector[i]->getStackPointer();
             delete threadVector[i];
         }
         for(int i = 0; i < mutexVector.size(); i++){
@@ -317,8 +318,10 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
     
-    char *sharedMemory = BASE_ADDRESS;
-    strncpy(sharedMemory, (const char *)data, *length);    
+    void *sharedMemory;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    
+    strncpy((char*)sharedMemory, (const char *)data, *length);
     int writeLength;
     int cumLength = 0;
     
@@ -329,21 +332,23 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         else {
             writeLength = *length;
         }
-        MachineFileWrite(filedescriptor, sharedMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
+        MachineFileWrite(filedescriptor, (char*)sharedMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
 
         if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
+            VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
         cumLength += threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
 
         *length -= writeLength;
-        sharedMemory = sharedMemory + writeLength;
+        sharedMemory = (char*)sharedMemory + writeLength;
     }
 
     *length = cumLength;
     
+    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
     MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
 }
@@ -482,16 +487,23 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
-    char *stackPointer = new char[memsize];
-	SMachineContext mcntx;
+    void *stackPointer;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, &stackPointer);
     
-    TVMThreadID newThreadID = threadVector.size();
-    TCB* thread = new TCB(newThreadID, stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
-    threadVector.push_back(thread);
-    *tid = threadVector[newThreadID]->getThreadID();
-    MachineResumeSignals(&sigState);
-	return VM_STATUS_SUCCESS;
-    
+    if (stackPointer == NULL) {
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INSUFFICIENT_RESOURCES;
+    }
+    else {
+        SMachineContext mcntx;
+        
+        TVMThreadID newThreadID = threadVector.size();
+        TCB* thread = new TCB(newThreadID, (char*)stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
+        threadVector.push_back(thread);
+        *tid = threadVector[newThreadID]->getThreadID();
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
 }
 
 TVMStatus VMThreadID(TVMThreadIDRef threadref) {
