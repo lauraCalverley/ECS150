@@ -6,6 +6,7 @@
 #include "TCB.h"
 #include "Mutex.h"
 #include "MemoryPool.h"
+#include <cstring>
 #include <vector>
 #include <queue>
 
@@ -407,7 +408,9 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     }
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
     
-    char *sharedMemory = BASE_ADDRESS;
+    void *sharedMemory;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    
     int readLength;
     int cumLength = 0;
     
@@ -418,7 +421,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         else {
             readLength = *length;
         }
-        MachineFileRead(filedescriptor, sharedMemory, readLength, callbackMachineFile, &savedCURRENTTHREAD);
+        MachineFileRead(filedescriptor, (char*)sharedMemory, readLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
         
         int resultLength = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
@@ -427,15 +430,16 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
-        strncpy((char*)data, sharedMemory, resultLength);
+        strncpy((char*)data, (char*)sharedMemory, resultLength);
         cumLength += resultLength;
         *length -= readLength;
-        sharedMemory = sharedMemory + readLength;
+        sharedMemory = (char*)sharedMemory + readLength;
         data = (char*)data + readLength;
     }
     
     *length = cumLength;
     
+    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
     MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
 }
