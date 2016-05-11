@@ -22,6 +22,7 @@ vector<TCB*> threadVector;
 vector<Mutex*> mutexVector;
 priority_queue<TCB> readyQueue;
 vector<MemoryPool*> memoryPoolVector;
+priority_queue<TCB> memoryPoolWaitQueue;
 int TICKMS;
 volatile int TICK_COUNT = 0;
 char *BASE_ADDRESS = NULL;
@@ -260,6 +261,26 @@ void callbackMachineRequestAlarm(void *calldata) {
         }
     }    
     
+    while (!memoryPoolWaitQueue.empty()) {
+        void *sharedMemory;
+        TVMThreadID topThreadID = memoryPoolWaitQueue.top().getThreadID();
+        if (threadVector[topThreadID]->getDeleted() == 0) {
+            VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+        }
+        else {
+            memoryPoolWaitQueue.pop();
+            continue;
+        }
+        if (sharedMemory == NULL) {
+            break;
+        }
+        else {
+            threadVector[topThreadID]->setSharedMemoryPointer(sharedMemory);
+            memoryPoolWaitQueue.pop();
+            Scheduler(1, topThreadID);
+        }
+    }
+    
     Scheduler(3, CURRENT_THREAD);
     MachineResumeSignals(&sigState);
 }
@@ -308,6 +329,28 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
 
 
 //VM File functions
+void callbackAllocate(TVMThreadID thread, void* sharedMemory) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    
+    
+    
+    
+//    threadVector[*(int*)threadID]->setMachineFileFunctionResult(result);
+//    Scheduler(1, threadVector[*(int*)threadID]->getThreadID());
+    Scheduler(6,thread);
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    while(sharedMemory == NULL){
+        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    }
+    Scheduler(1, thread);
+    
+    
+    MachineResumeSignals(&sigState);
+}
+
+    
+    
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -321,6 +364,12 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     
     void *sharedMemory;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    
+    if(sharedMemory == NULL){
+        memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
+        Scheduler(6,CURRENT_THREAD);
+        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+    }
     
     strncpy((char*)sharedMemory, (const char *)data, *length);
     int writeLength;
@@ -410,6 +459,12 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     
     void *sharedMemory;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    
+    if(sharedMemory == NULL){
+        memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
+        Scheduler(6,CURRENT_THREAD);
+        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+    }
     
     int readLength;
     int cumLength = 0;

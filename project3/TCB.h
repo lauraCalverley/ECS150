@@ -22,6 +22,7 @@ class TCB {
     volatile int sleepCount;
     volatile int mutexWaitCount;
     int machineFileFunctionResult;
+    void *sharedMemory;
     
 public:
     
@@ -71,6 +72,10 @@ public:
 
     int getMachineFileFunctionResult();
     void setMachineFileFunctionResult(int result);
+    
+    void setSharedMemoryPointer(void *p);
+    void* getSharedMemoryPointer();
+
     
     friend bool operator<(const TCB& lhs, const TCB& rhs){
         if (lhs.priority < rhs.priority) {

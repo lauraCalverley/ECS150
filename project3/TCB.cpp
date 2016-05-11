@@ -20,6 +20,8 @@ TCB::TCB(TVMThreadID tid, char *stackP, TVMMemorySize stackS, TVMThreadState s, 
     deleted = 0;
     sleepCount = 0;
     machineFileFunctionResult = 0;
+    
+    sharedMemory = NULL;
 }
     
 TVMThreadID TCB::getThreadID() const{
@@ -132,4 +134,10 @@ void TCB::setMachineFileFunctionResult(int result) {
     machineFileFunctionResult = result;
 }
 
+void TCB::setSharedMemoryPointer(void *p) {
+    sharedMemory = p;
+}
 
+void* TCB::getSharedMemoryPointer() {
+    return sharedMemory;
+}
