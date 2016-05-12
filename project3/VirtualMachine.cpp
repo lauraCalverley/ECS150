@@ -333,7 +333,7 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-    
+    cout << "inVMFileWrite" << endl;
     if ((data==NULL) || (length==NULL)) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
