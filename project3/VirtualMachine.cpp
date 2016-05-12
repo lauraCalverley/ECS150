@@ -371,7 +371,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
     }
     
-    strncpy((char*)sharedMemory, (const char *)data, *length);
+    memcpy((char*)sharedMemory, (const char *)data, *length);
     int writeLength;
     int cumLength = 0;
     
@@ -485,7 +485,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
-        strncpy((char*)data, (char*)sharedMemory, resultLength);
+        memcpy((char*)data, (char*)sharedMemory, resultLength);
         cumLength += resultLength;
         *length -= readLength;
         sharedMemory = (char*)sharedMemory + readLength;
