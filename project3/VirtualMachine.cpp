@@ -528,11 +528,11 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
-    //void *stackPointer;
-    //VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, &stackPointer);
+    void *stackPointer;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, &stackPointer);
     
-    char *stackPointer;
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, (void **)&stackPointer);
+    //char *stackPointer;
+    //VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, (void **)&stackPointer);
     
     if (stackPointer == NULL) {
         MachineResumeSignals(&sigState);
