@@ -1,4 +1,5 @@
 #include "VirtualMachine.h"
+#include <iostream> //temp
 
 void VMMain(int argc, char *argv[]){
     int Index, Inner;
@@ -50,6 +51,7 @@ void VMMain(int argc, char *argv[]){
     }
     VMPrint("Done\nPrinting values:");
     for(Index = 0; Index < (256 / sizeof(int)); Index++){
+        cout << Pointers[0][Index];
         VMPrint(" %d", Pointers[0][Index]);
     }
     VMPrint("\nDeallocating space: "); 
