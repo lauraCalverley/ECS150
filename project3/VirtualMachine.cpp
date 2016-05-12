@@ -351,9 +351,9 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         Scheduler(6,CURRENT_THREAD);
         sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
     }
-    cout << "here?" << endl;
 
     strncpy((char*)sharedMemory, (const char *)data, *length);
+    cout << "here?" << endl;
     int writeLength;
     int cumLength = 0;
     cout << "before while" << endl;
