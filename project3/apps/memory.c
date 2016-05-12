@@ -1,5 +1,5 @@
 #include "VirtualMachine.h"
-#include <cstring.h> 
+#include <cstdio> 
 
 void VMMain(int argc, char *argv[]){
     int Index, Inner;
