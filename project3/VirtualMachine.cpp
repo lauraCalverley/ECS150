@@ -344,14 +344,15 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     
     void *sharedMemory;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
-    cout << "here?" << endl;
+    
     if(sharedMemory == NULL){
         cout << "no space available in fileWrite" << endl;
         memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
         Scheduler(6,CURRENT_THREAD);
         sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
     }
-    
+    cout << "here?" << endl;
+
     strncpy((char*)sharedMemory, (const char *)data, *length);
     int writeLength;
     int cumLength = 0;
