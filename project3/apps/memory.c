@@ -51,7 +51,7 @@ void VMMain(int argc, char *argv[]){
     }
     VMPrint("Done\nPrinting values:");
     for(Index = 0; Index < (256 / sizeof(int)); Index++){
-        printf("test\n");
+        // printf("test\n");
         printf(" %d", Pointers[0][Index]);
         VMPrint(" %d", Pointers[0][Index]);
     }
