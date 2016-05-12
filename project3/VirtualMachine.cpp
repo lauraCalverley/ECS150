@@ -333,7 +333,7 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-    cout << "in VMFileWrite" << endl;
+    // cout << "in VMFileWrite" << endl;
 
     if ((data==NULL) || (length==NULL)) {
         MachineResumeSignals(&sigState);
@@ -346,7 +346,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
     
     if(sharedMemory == NULL){
-        cout << "no space available in fileWrite" << endl;
+        // cout << "no space available in fileWrite" << endl;
         memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
         Scheduler(6,CURRENT_THREAD);
         sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
@@ -356,9 +356,9 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     // cout << "here?" << endl;
     int writeLength;
     int cumLength = 0;
-    cout << "before while" << endl;
+    // cout << "before while" << endl;
     
-    char* writeMemory = sharedMemory;
+    char* writeMemory = (void*)sharedMemory;
     while (*length != 0) {
         // cout << "in while loop" << endl;
         if(*length > 512) {
@@ -455,7 +455,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     
     int readLength;
     int cumLength = 0;
-    char* readMemory = sharedMemory;
+    char* readMemory = (void*)sharedMemory;
 
     
     while (*length != 0) {
