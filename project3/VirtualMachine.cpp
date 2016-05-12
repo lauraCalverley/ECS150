@@ -261,25 +261,25 @@ void callbackMachineRequestAlarm(void *calldata) {
         }
     }    
     
-    // while (!memoryPoolWaitQueue.empty()) {
-    //     void *sharedMemory;
-    //     TVMThreadID topThreadID = memoryPoolWaitQueue.top().getThreadID();
-    //     if (threadVector[topThreadID]->getDeleted() == 0) {
-    //         VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
-    //     }
-    //     else {
-    //         memoryPoolWaitQueue.pop();
-    //         continue;
-    //     }
-    //     if (sharedMemory == NULL) {
-    //         break;
-    //     }
-    //     else {
-    //         threadVector[topThreadID]->setSharedMemoryPointer(sharedMemory);
-    //         memoryPoolWaitQueue.pop();
-    //         Scheduler(1, topThreadID);
-    //     }
-    // }
+    while (!memoryPoolWaitQueue.empty()) {
+        void *sharedMemory;
+        TVMThreadID topThreadID = memoryPoolWaitQueue.top().getThreadID();
+        if (threadVector[topThreadID]->getDeleted() == 0) {
+            VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+        }
+        else {
+            memoryPoolWaitQueue.pop();
+            continue;
+        }
+        if (sharedMemory == NULL) {
+            break;
+        }
+        else {
+            threadVector[topThreadID]->setSharedMemoryPointer(sharedMemory);
+            memoryPoolWaitQueue.pop();
+            Scheduler(1, topThreadID);
+        }
+    }
     
     Scheduler(3, CURRENT_THREAD);
     MachineResumeSignals(&sigState);
@@ -365,11 +365,12 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     void *sharedMemory;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
     
-    // if(sharedMemory == NULL){
-    //     memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
-    //     Scheduler(6,CURRENT_THREAD);
-    //     sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
-    // }
+    if(sharedMemory == NULL){
+        cout << "no space available in fileWrite" << endl;
+        memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
+        Scheduler(6,CURRENT_THREAD);
+        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+    }
     
     strncpy((char*)sharedMemory, (const char *)data, *length);
     int writeLength;
