@@ -545,7 +545,7 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         TCB* thread = new TCB(newThreadID, (char*)stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
         threadVector.push_back(thread);
         *tid = threadVector[newThreadID]->getThreadID();
-        cout << "TID: " << *tid << endl;
+        //cout << "TID: " << *tid << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
@@ -629,19 +629,19 @@ TVMStatus VMThreadActivate(TVMThreadID thread) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     if (!threadExists(thread)) {
-        cout << "if" << endl;
+        //cout << "if" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
     }
     else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
-        cout << "else if" << endl;
+        //cout << "else if" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_STATE;
     }
     else {
-        cout << "else" << endl;
+        //cout << "else" << endl;
         MachineContextCreate(threadVector[thread]->getMachineContext(), entrySkeleton, threadVector[thread], threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
-        cout << "HERE" << endl;
+        //cout << "HERE" << endl;
         Scheduler(5, thread);
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
