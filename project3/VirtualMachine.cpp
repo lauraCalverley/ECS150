@@ -354,6 +354,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     strncpy((char*)sharedMemory, (const char *)data, *length);
     int writeLength;
     int cumLength = 0;
+    cout << "before while" << endl;
     
     while (*length != 0) {
         cout << "in while loop" << endl;
