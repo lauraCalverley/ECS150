@@ -361,12 +361,14 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
             writeLength = 512;
         }
         else {
+            cout << "in first else" << endl;
             writeLength = *length;
         }
         MachineFileWrite(filedescriptor, (char*)sharedMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
 
         if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
+            cout << "in second if " << endl;
             VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
