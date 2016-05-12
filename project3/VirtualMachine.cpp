@@ -73,7 +73,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
 
         // create idle thread and TCB; activate idle thread
         TVMThreadID idleTID;
-        VMThreadCreate(idle, NULL, 0x100000, VM_THREAD_PRIORITY_IDLE, &idleTID);
+        VMThreadCreate(idle, NULL, 0x1000000, VM_THREAD_PRIORITY_IDLE, &idleTID);
         VMThreadActivate(idleTID);
         
         MachineEnableSignals();
@@ -528,11 +528,11 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 
-    void *stackPointer;
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, &stackPointer);
+    //void *stackPointer;
+    //VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, &stackPointer);
     
-    //char *stackPointer;
-    //VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, (void **)&stackPointer);
+    char *stackPointer;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, (void **)&stackPointer);
     
     if (stackPointer == NULL) {
         MachineResumeSignals(&sigState);
@@ -545,6 +545,7 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         TCB* thread = new TCB(newThreadID, (char*)stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
         threadVector.push_back(thread);
         *tid = threadVector[newThreadID]->getThreadID();
+        cout << "TID: " << *tid << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
@@ -628,15 +629,19 @@ TVMStatus VMThreadActivate(TVMThreadID thread) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     if (!threadExists(thread)) {
+        cout << "if" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
     }
     else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
+        cout << "else if" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_STATE;
     }
     else {
+        cout << "else" << endl;
         MachineContextCreate(threadVector[thread]->getMachineContext(), entrySkeleton, threadVector[thread], threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
+        cout << "HERE" << endl;
         Scheduler(5, thread);
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
