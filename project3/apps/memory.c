@@ -50,10 +50,10 @@ void VMMain(int argc, char *argv[]){
         return;
     }
     VMPrint("Done\nPrinting values:");
+    printf("int size: %d\n", sizeof(int));
     for(Index = 0; Index < (256 / sizeof(int)); Index++){
-        // printf("test\n");
         // printf(" %d\n", Pointers[0][Index]);
-        VMPrint("%d", Pointers[0][Index]);
+        VMPrint(" %d", Pointers[0][Index]);
     }
     VMPrint("\nDeallocating space: "); 
     if(VM_STATUS_SUCCESS != VMMemoryPoolDeallocate(MemoryPoolID, Pointers[0])){
