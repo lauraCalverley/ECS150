@@ -358,7 +358,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     int cumLength = 0;
     // cout << "before while" << endl;
     
-    char* writeMemory = (void*)sharedMemory;
+    char* writeMemory = (char*)sharedMemory;
     while (*length != 0) {
         // cout << "in while loop" << endl;
         if(*length > 512) {
@@ -455,7 +455,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     
     int readLength;
     int cumLength = 0;
-    char* readMemory = (void*)sharedMemory;
+    char* readMemory = (char*)sharedMemory;
 
     
     while (*length != 0) {
