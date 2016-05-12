@@ -262,6 +262,7 @@ void callbackMachineRequestAlarm(void *calldata) {
     }    
     
     while (!memoryPoolWaitQueue.empty()) {
+        cout << "in callback while loop and memoryPoolWaitQueue is not empty" << endl;
         void *sharedMemory;
         TVMThreadID topThreadID = memoryPoolWaitQueue.top().getThreadID();
         if (threadVector[topThreadID]->getDeleted() == 0) {
@@ -325,28 +326,6 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
-}
-
-
-//VM File functions
-void callbackAllocate(TVMThreadID thread, void* sharedMemory) {
-    TMachineSignalState sigState;
-    MachineSuspendSignals(&sigState);
-    
-    
-    
-    
-//    threadVector[*(int*)threadID]->setMachineFileFunctionResult(result);
-//    Scheduler(1, threadVector[*(int*)threadID]->getThreadID());
-    Scheduler(6,thread);
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
-    while(sharedMemory == NULL){
-        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
-    }
-    Scheduler(1, thread);
-    
-    
-    MachineResumeSignals(&sigState);
 }
 
     
