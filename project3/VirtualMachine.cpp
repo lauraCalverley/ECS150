@@ -10,8 +10,6 @@
 #include <vector>
 #include <queue>
 
-#include <iostream> // temp
-
 extern "C" {
 using namespace std;
 
@@ -29,7 +27,7 @@ char *BASE_ADDRESS = NULL;
 TVMMemorySize SHARED_MEMORY_SIZE = 0;
 char *HEAP_BASE = NULL;
 TVMMemorySize HEAP_BASE_SIZE = 0;
-const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
+const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 
 
@@ -50,13 +48,12 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     HEAP_BASE_SIZE = heapsize;
     HEAP_BASE = new char[HEAP_BASE_SIZE];
     
-    TVMMemoryPoolID systemPoolID = 0; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
+    TVMMemoryPoolID systemPoolID = 0;
     VMMemoryPoolCreate(HEAP_BASE, HEAP_BASE_SIZE, &systemPoolID);
-    //const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = systemPoolID; // FIXME - redeclaration of VM_MEMORY_POOL_ID_SYSTEM???
     
     SHARED_MEMORY_SIZE = sharedsize;
-    BASE_ADDRESS = (char*)MachineInitialize(SHARED_MEMORY_SIZE); // FIXME - char* ??? // FIXME - check for NULL? then what?
-    TVMMemoryPoolID sharedMemoryPoolID = 1; // FIXME - bad, use VM_MEMORY_POOL_ID_SYSTEM!!!
+    BASE_ADDRESS = (char*)MachineInitialize(SHARED_MEMORY_SIZE);
+    TVMMemoryPoolID sharedMemoryPoolID = 1;
     VMMemoryPoolCreate(BASE_ADDRESS, SHARED_MEMORY_SIZE, &sharedMemoryPoolID);
 
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
@@ -189,7 +186,7 @@ TVMStatus VMMemoryPoolAllocate(TVMMemoryPoolID memory, TVMMemorySize size, void 
         return VM_STATUS_ERROR_INSUFFICIENT_RESOURCES;
     }
     else {
-        *pointer = memoryLocation; // FIXME??
+        *pointer = memoryLocation;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
@@ -267,7 +264,6 @@ void callbackMachineRequestAlarm(void *calldata) {
     }    
     
     while (!memoryPoolWaitQueue.empty()) {
-        cout << "in callback while loop and memoryPoolWaitQueue is not empty" << endl;
         void *sharedMemory;
         TVMThreadID topThreadID = memoryPoolWaitQueue.top().getThreadID();
         if (threadVector[topThreadID]->getDeleted() == 0) {
