@@ -112,6 +112,9 @@ void entrySkeleton(void *thread) {
 
 //MemoryPool functions
 bool memoryPoolExists(TVMMemoryPoolID memPoolID) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
     bool exists;
     if (memPoolID >= memoryPoolVector.size())
     {
@@ -123,6 +126,8 @@ bool memoryPoolExists(TVMMemoryPoolID memPoolID) {
     else {
         exists = 1;
     }
+
+    MachineResumeSignals(&sigState);
     return exists;
 }
     
@@ -333,7 +338,6 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-    // cout << "in VMFileWrite" << endl;
 
     if ((data==NULL) || (length==NULL)) {
         MachineResumeSignals(&sigState);
@@ -346,33 +350,27 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
     
     if(sharedMemory == NULL){
-        // cout << "no space available in fileWrite" << endl;
         memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
         Scheduler(6,CURRENT_THREAD);
         sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
     }
 
     memcpy((char*)sharedMemory, (const char *)data, *length);
-    // cout << "here?" << endl;
     int writeLength;
     int cumLength = 0;
-    // cout << "before while" << endl;
     
     char* writeMemory = (char*)sharedMemory;
     while (*length != 0) {
-        // cout << "in while loop" << endl;
         if(*length > 512) {
             writeLength = 512;
         }
         else {
-            // cout << "in first else" << endl;
             writeLength = *length;
         }
         MachineFileWrite(filedescriptor, (char*)writeMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
 
         if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
-            // cout << "in second if " << endl;
             VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
@@ -512,6 +510,9 @@ TVMStatus VMFileClose(int filedescriptor) {
 
 //VM Thread functions
 bool threadExists(TVMThreadID thread) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
     bool exists;
     if (thread >= threadVector.size())
     {
@@ -523,6 +524,8 @@ bool threadExists(TVMThreadID thread) {
     else {
         exists = 1;
     }
+
+    MachineResumeSignals(&sigState);
     return exists;
 }
 
@@ -669,6 +672,9 @@ TVMStatus VMThreadTerminate(TVMThreadID thread) {
 
 //VM Mutex functions    
 bool mutexExists(TVMMutexID id) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
     bool exists;
     if (id >= mutexVector.size())
     {
@@ -680,6 +686,9 @@ bool mutexExists(TVMMutexID id) {
     else {
         exists = 1;
     }
+
+
+    MachineResumeSignals(&sigState);
     return exists;
 }
 
