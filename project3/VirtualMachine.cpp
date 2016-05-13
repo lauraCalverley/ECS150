@@ -73,7 +73,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
 
         // create idle thread and TCB; activate idle thread
         TVMThreadID idleTID;
-        VMThreadCreate(idle, NULL, 0x1000000, VM_THREAD_PRIORITY_IDLE, &idleTID);
+        VMThreadCreate(idle, NULL, 0x100000, VM_THREAD_PRIORITY_IDLE, &idleTID);
         VMThreadActivate(idleTID);
         
         MachineEnableSignals();
@@ -193,8 +193,6 @@ TVMStatus VMMemoryPoolAllocate(TVMMemoryPoolID memory, TVMMemorySize size, void 
 TVMStatus VMMemoryPoolDeallocate(TVMMemoryPoolID memory, void *pointer) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-    
-    //cout << pointer << endl;
 
     if ((!memoryPoolExists(memory)) || (pointer == NULL)) {
         MachineResumeSignals(&sigState);
@@ -205,7 +203,6 @@ TVMStatus VMMemoryPoolDeallocate(TVMMemoryPoolID memory, void *pointer) {
     
     if (deallocatedLocation == NULL) {
         MachineResumeSignals(&sigState);
-        cout << "deallocatedLocation was NULL - i.e. it failed" << endl;
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     else {
@@ -331,13 +328,8 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
     }
 }
 
-<<<<<<< HEAD
     
     
-=======
-
-//VM File functions
->>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -350,32 +342,23 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
     
-    char *sharedMemory;
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, (void **)&sharedMemory);
-
+    void *sharedMemory;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+    
     if(sharedMemory == NULL){
         // cout << "no space available in fileWrite" << endl;
         memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
         Scheduler(6,CURRENT_THREAD);
-        sharedMemory = (char*)threadVector[CURRENT_THREAD]->getSharedMemoryPointer(); // FIXME
+        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
     }
-<<<<<<< HEAD
 
     memcpy((char*)sharedMemory, (const char *)data, *length);
     // cout << "here?" << endl;
-=======
-    
-    memcpy((char*)sharedMemory, (const char *)data, *length);
->>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     int writeLength;
     int cumLength = 0;
     // cout << "before while" << endl;
     
-<<<<<<< HEAD
     char* writeMemory = (char*)sharedMemory;
-=======
-    char *writeMemory = sharedMemory;
->>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     while (*length != 0) {
         // cout << "in while loop" << endl;
         if(*length > 512) {
@@ -397,14 +380,11 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         cumLength += threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
 
         *length -= writeLength;
-<<<<<<< HEAD
         writeMemory = (char*)sharedMemory + writeLength;
-=======
-        writeMemory = (char*)writeMemory + writeLength;
->>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     }
 
     *length = cumLength;
+    
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
     MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
@@ -464,25 +444,20 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     }
     TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
     
-    char *sharedMemory;
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, (void **)&sharedMemory);
+    void *sharedMemory;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
     
     if(sharedMemory == NULL){
         memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
         Scheduler(6,CURRENT_THREAD);
-        sharedMemory = (char*)threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
     }
     
     int readLength;
     int cumLength = 0;
-<<<<<<< HEAD
     char* readMemory = (char*)sharedMemory;
 
     
-=======
-    char *readMemory = sharedMemory;
-
->>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     while (*length != 0) {
         if(*length > 512) {
             readLength = 512;
@@ -563,9 +538,6 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
     void *stackPointer;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, &stackPointer);
     
-    //char *stackPointer;
-    //VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SYSTEM, memsize, (void **)&stackPointer);
-    
     if (stackPointer == NULL) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INSUFFICIENT_RESOURCES;
@@ -577,7 +549,6 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
         TCB* thread = new TCB(newThreadID, (char*)stackPointer, memsize, VM_THREAD_STATE_DEAD, prio, entry, param, mcntx);
         threadVector.push_back(thread);
         *tid = threadVector[newThreadID]->getThreadID();
-        //cout << "TID: " << *tid << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
@@ -661,19 +632,15 @@ TVMStatus VMThreadActivate(TVMThreadID thread) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
     if (!threadExists(thread)) {
-        //cout << "if" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_ID;
     }
     else if (threadVector[thread]->getTVMThreadState() != VM_THREAD_STATE_DEAD) {
-        //cout << "else if" << endl;
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_STATE;
     }
     else {
-        //cout << "else" << endl;
         MachineContextCreate(threadVector[thread]->getMachineContext(), entrySkeleton, threadVector[thread], threadVector[thread]->getStackPointer(), threadVector[thread]->getStackSize());
-        //cout << "HERE" << endl;
         Scheduler(5, thread);
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
@@ -951,6 +918,39 @@ void Scheduler(int transition, TVMThreadID thread) {
                             tempReadyVector.push_back(top);
                         }
                         readyQueue.pop();
+                    }
+                    for (int i=0; i < tempReadyVector.size(); i++) {
+                        readyQueue.push(tempReadyVector[i]);
+                    }
+                    break;
+                }
+                case VM_THREAD_STATE_WAITING: {
+                    // nothing
+                    break;
+                }
+            }
+            break;
+        }
+        case 5: { // Process activated
+            threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
+            readyQueue.push(*threadVector[thread]);
+            
+            if (threadVector[thread]->getTVMThreadPriority() > threadVector[CURRENT_THREAD]->getTVMThreadPriority()) {
+                Scheduler(3, thread);
+            }
+
+            break;
+        }
+        case 6: { // Process blocks // Scheduler(6. CURRENT_THREAD)
+            threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_WAITING);
+            Scheduler(2, thread);
+            break;
+        }
+    }
+}    
+}   
+
+                      readyQueue.pop();
                     }
                     for (int i=0; i < tempReadyVector.size(); i++) {
                         readyQueue.push(tempReadyVector[i]);
