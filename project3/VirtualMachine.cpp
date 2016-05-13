@@ -265,6 +265,7 @@ void callbackMachineRequestAlarm(void *calldata) {
     }    
     
     while (!memoryPoolWaitQueue.empty()) {
+        cout << "in callback while loop and memoryPoolWaitQueue is not empty" << endl;
         void *sharedMemory;
         TVMThreadID topThreadID = memoryPoolWaitQueue.top().getThreadID();
         if (threadVector[topThreadID]->getDeleted() == 0) {
@@ -330,12 +331,18 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
     }
 }
 
+<<<<<<< HEAD
+    
+    
+=======
 
 //VM File functions
+>>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-    
+    // cout << "in VMFileWrite" << endl;
+
     if ((data==NULL) || (length==NULL)) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
@@ -347,27 +354,42 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, (void **)&sharedMemory);
 
     if(sharedMemory == NULL){
+        // cout << "no space available in fileWrite" << endl;
         memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
         Scheduler(6,CURRENT_THREAD);
         sharedMemory = (char*)threadVector[CURRENT_THREAD]->getSharedMemoryPointer(); // FIXME
     }
+<<<<<<< HEAD
+
+    memcpy((char*)sharedMemory, (const char *)data, *length);
+    // cout << "here?" << endl;
+=======
     
     memcpy((char*)sharedMemory, (const char *)data, *length);
+>>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     int writeLength;
     int cumLength = 0;
+    // cout << "before while" << endl;
     
+<<<<<<< HEAD
+    char* writeMemory = (char*)sharedMemory;
+=======
     char *writeMemory = sharedMemory;
+>>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     while (*length != 0) {
+        // cout << "in while loop" << endl;
         if(*length > 512) {
             writeLength = 512;
         }
         else {
+            // cout << "in first else" << endl;
             writeLength = *length;
         }
         MachineFileWrite(filedescriptor, (char*)writeMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
         Scheduler(6,CURRENT_THREAD);
 
         if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
+            // cout << "in second if " << endl;
             VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
@@ -375,7 +397,11 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         cumLength += threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
 
         *length -= writeLength;
+<<<<<<< HEAD
+        writeMemory = (char*)sharedMemory + writeLength;
+=======
         writeMemory = (char*)writeMemory + writeLength;
+>>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     }
 
     *length = cumLength;
@@ -449,8 +475,14 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     
     int readLength;
     int cumLength = 0;
+<<<<<<< HEAD
+    char* readMemory = (char*)sharedMemory;
+
+    
+=======
     char *readMemory = sharedMemory;
 
+>>>>>>> 6b3f348f67535030adfd0a894321ff1f8fe2017a
     while (*length != 0) {
         if(*length > 512) {
             readLength = 512;
@@ -554,15 +586,15 @@ TVMStatus VMThreadCreate(TVMThreadEntry entry, void *param, TVMMemorySize memsiz
 TVMStatus VMThreadID(TVMThreadIDRef threadref) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-	if (threadref == NULL) {
+    if (threadref == NULL) {
         MachineResumeSignals(&sigState);
-		return VM_STATUS_ERROR_INVALID_PARAMETER;
-	}
-	else {
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
         *threadref = threadVector[CURRENT_THREAD]->getThreadID();
         MachineResumeSignals(&sigState);
-		return VM_STATUS_SUCCESS;
-	}
+        return VM_STATUS_SUCCESS;
+    }
 }
 
 TVMStatus VMThreadSleep(TVMTick tick) {
