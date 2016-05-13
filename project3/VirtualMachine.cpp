@@ -948,38 +948,5 @@ void Scheduler(int transition, TVMThreadID thread) {
         }
     }
 }    
-}   
-
-                      readyQueue.pop();
-                    }
-                    for (int i=0; i < tempReadyVector.size(); i++) {
-                        readyQueue.push(tempReadyVector[i]);
-                    }
-                    break;
-                }
-                case VM_THREAD_STATE_WAITING: {
-                    // nothing
-                    break;
-                }
-            }
-            break;
-        }
-        case 5: { // Process activated
-            threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_READY);
-            readyQueue.push(*threadVector[thread]);
-            
-            if (threadVector[thread]->getTVMThreadPriority() > threadVector[CURRENT_THREAD]->getTVMThreadPriority()) {
-                Scheduler(3, thread);
-            }
-
-            break;
-        }
-        case 6: { // Process blocks // Scheduler(6. CURRENT_THREAD)
-            threadVector[thread]->setTVMThreadState(VM_THREAD_STATE_WAITING);
-            Scheduler(2, thread);
-            break;
-        }
-    }
 }    
-}   
 
