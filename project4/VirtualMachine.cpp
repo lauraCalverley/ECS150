@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "VirtualMachine.h"
 #include "Machine.h"
@@ -42,7 +43,10 @@ bool threadExists(TVMThreadID thread);
 void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
 
-TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, int argc, char *argv[]) {
+    
+//TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, int argc, char *argv[]) {
+TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
+    
     TICKMS = tickms;
 
     HEAP_BASE_SIZE = heapsize;
@@ -74,6 +78,11 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         VMThreadActivate(idleTID);
         
         MachineEnableSignals();
+        
+        //load FAT
+        //MachineFileOpen(mount, int flags, int mode, callbackMachineFile, &mainTID);
+        MachineFileOpen(mount, O_RDWR, 0644, callbackMachineFile, &mainTID);
+        
         module(argc, argv);
 
         VMUnloadModule();

@@ -15,8 +15,10 @@ APPDIR=./apps
 OBJS=$(OBJDIR)/Machine.o \
      $(OBJDIR)/VirtualMachineUtils.o \
      $(OBJDIR)/VirtualMachine.o \
+     $(OBJDIR)/TCB.o \
+     $(OBJDIR)/Mutex.o \
+     $(OBJDIR)/MemoryPool.o \
      $(OBJDIR)/main.o
-     
      
 #DEBUG_MODE=TRUE
 UNAME := $(shell uname)
