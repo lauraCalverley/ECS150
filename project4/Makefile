@@ -18,6 +18,7 @@ OBJS=$(OBJDIR)/Machine.o \
      $(OBJDIR)/TCB.o \
      $(OBJDIR)/Mutex.o \
      $(OBJDIR)/MemoryPool.o \
+     $(OBJDIR)/BPB.o \
      $(OBJDIR)/main.o
      
 #DEBUG_MODE=TRUE
