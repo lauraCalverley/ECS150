@@ -10,10 +10,9 @@
 #include <cstring>
 #include <vector>
 #include <queue>
-
+#include <stdint.h>
 
 #include <iostream> //temp
-
 
 extern "C" {
 using namespace std;
@@ -46,11 +45,10 @@ void callbackMachineFile(void* threadID, int result);
 bool threadExists(TVMThreadID thread);
 void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
-
+void readSector(int fd, char *sectorBuffer, int sectorNumber);
     
-//TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, int argc, char *argv[]) {
+    
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
-    
     TICKMS = tickms;
 
     HEAP_BASE_SIZE = heapsize;
@@ -81,47 +79,98 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         VMThreadCreate(idle, NULL, 0x100000, VM_THREAD_PRIORITY_IDLE, &idleTID);
         VMThreadActivate(idleTID);
         
+        
         MachineEnableSignals();
         
-        int i = 0;
-        
         //load FAT
-        MachineFileOpen(mount, O_RDWR, 0600, callbackMachineFile, &CURRENT_THREAD);
-        Scheduler(6,CURRENT_THREAD);
-        cout << i++ << endl;
-        int fd = threadVector[CURRENT_THREAD]->getMachineFileFunctionResult();
         
-        int BPB_RsvdSecCnt, BPB_NumFATs, BPB_FATSz16, BPB_RootEntCnt, BPB_TotSec32, BPB_SecPerClus, FirstRootSector, RootDirectorySectors, FirstDataSector, ClusterCount;
+        TVMThreadID savedCurrentThread = CURRENT_THREAD;
+        
+        MachineFileOpen(mount, O_RDWR, 0600, callbackMachineFile, &savedCurrentThread);
+        Scheduler(6,savedCurrentThread);
+        int fd = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
+        
+        if (fd < 0) {
+            return VM_STATUS_FAILURE;
+        }
+        
+        //
+        void *sectorData;
+        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
+        
+        readSector(fd, (char*)sectorData, 0);
+        
+//        // for debugging
+//        for (int i=0; i < 512; i++) {
+//            cout << ((char*)sectorData)[i];
+//        }
+//        cout << endl;
+
+        int BPB_RsvdSecCnt, BPB_NumFATs, BPB_FATSz16, BPB_RootEntCnt, BPB_TotSec32, FirstRootSector, RootDirectorySectors, FirstDataSector, ClusterCount;
+        
+        char num[2];
+        strncpy(num, &((char*)sectorData)[13], 2);
+        
+        cout << "num :" << num[0] << num[1] << endl;
+        BPB_RsvdSecCnt = atoi(num);
+        
+        //cout << BPB_RsvdSecCnt << endl;
+        
+//        strncpy ( str2, str1, sizeof(str2) );
+//        char * strncpy ( char * destination, const char * source, size_t num );
+
+
+        //*((unint16_t*)(Buffer + Offset))
 
         
-        MachineFileSeek(fd, 13, 0, callbackMachineFile, &CURRENT_THREAD);
-        Scheduler(6,CURRENT_THREAD);
-        cout << i++ << endl;
-        MachineFileRead(fd, &BPB_SecPerClus, 1, callbackMachineFile, &CURRENT_THREAD); //*2
-        Scheduler(6,CURRENT_THREAD);
-        cout << i++ << endl;
-        MachineFileRead(fd, &BPB_RsvdSecCnt, 2, callbackMachineFile, &CURRENT_THREAD); //*3
-        Scheduler(6,CURRENT_THREAD);
-        cout << i++ << endl;
-        MachineFileRead(fd, &BPB_NumFATs, 1, callbackMachineFile, &CURRENT_THREAD); //*4
-        Scheduler(6,CURRENT_THREAD);
-        cout << i++ << endl;
-        MachineFileRead(fd, &BPB_RootEntCnt, 2, callbackMachineFile, &CURRENT_THREAD); //*5
-        Scheduler(6,CURRENT_THREAD);
-        MachineFileSeek(fd, 22, 0, callbackMachineFile, &CURRENT_THREAD);
-        Scheduler(6,CURRENT_THREAD);
-        MachineFileRead(fd, &BPB_FATSz16, 2, callbackMachineFile, &CURRENT_THREAD); //*8
-        Scheduler(6,CURRENT_THREAD);
-        MachineFileSeek(fd, 32, 0, callbackMachineFile, &CURRENT_THREAD);
-        Scheduler(6,CURRENT_THREAD);
-        MachineFileRead(fd, &BPB_TotSec32, 4, callbackMachineFile, &CURRENT_THREAD); //*BPB_TotSec32
-        Scheduler(6,CURRENT_THREAD);
+        
+//        int BPB_RsvdSecCnt, BPB_NumFATs, BPB_FATSz16, BPB_RootEntCnt, BPB_TotSec32, BPB_SecPerClus, FirstRootSector, RootDirectorySectors, FirstDataSector, ClusterCount;
+        
+        /*MachineFileSeek(fd, 13, 0, callbackMachineFile, &savedCurrentThread);
+        Scheduler(6,savedCurrentThread);
+
+        int result = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
+        
+        if (result < 0) {
+            cout << "error: MachineFileSeek(fd, 13, 0, callbackMachineFile, &savedCurrentThread);" << endl;
+        }
+
+        char *BPB_SecPerClus;
+        
+        MachineFileRead(fd, &BPB_SecPerClus, 1, callbackMachineFile, &savedCurrentThread); //2
+        Scheduler(6,savedCurrentThread);
+        result = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
+
+        if (result < 0) {
+            cout << "error: MachineFileRead(fd, BPB_SecPerClus, 1, callbackMachineFile, &savedCurrentThread);" << endl;
+        }
         
         
-        FirstRootSector = BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz16;
-        RootDirectorySectors = (BPB_RootEntCnt * 32) / 512;
-        FirstDataSector = FirstRootSector + RootDirectorySectors;
-        ClusterCount = (BPB_TotSec32 - FirstDataSector) / BPB_SecPerClus;
+        MachineFileRead(fd, &BPB_RsvdSecCnt, 2, callbackMachineFile, &savedCurrentThread); //3
+        Scheduler(6,savedCurrentThread);
+        MachineFileRead(fd, &BPB_NumFATs, 1, callbackMachineFile, &savedCurrentThread); //4
+        Scheduler(6,savedCurrentThread);
+        MachineFileRead(fd, &BPB_RootEntCnt, 2, callbackMachineFile, &savedCurrentThread); //5
+        Scheduler(6,savedCurrentThread);
+        MachineFileSeek(fd, 22, 0, callbackMachineFile, &savedCurrentThread);
+        Scheduler(6,savedCurrentThread);
+        MachineFileRead(fd, &BPB_FATSz16, 2, callbackMachineFile, &savedCurrentThread); //8
+        Scheduler(6,savedCurrentThread);
+        MachineFileSeek(fd, 32, 0, callbackMachineFile, &savedCurrentThread);
+        Scheduler(6,savedCurrentThread);
+        MachineFileRead(fd, &BPB_TotSec32, 4, callbackMachineFile, &savedCurrentThread); // BPB_TotSec32
+        Scheduler(6,savedCurrentThread);*/
+        
+        
+//        FirstRootSector = BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz16;
+//        RootDirectorySectors = (BPB_RootEntCnt * 32) / 512;
+//        FirstDataSector = FirstRootSector + RootDirectorySectors;
+//        ClusterCount = (BPB_TotSec32 - FirstDataSector) / BPB_SecPerClus;
+//        
+//        cout << "FirstRootSector" << FirstRootSector << endl;
+//        cout << "RootDirectorySectors" << RootDirectorySectors << endl;
+//        cout << "FirstDataSector" << FirstDataSector << endl;
+//        //cout << "ClusterCount" << ClusterCount << endl;
 
         
         
@@ -132,10 +181,8 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         
         
         
-        
-        
         module(argc, argv);
-
+        VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
         VMUnloadModule();
 
         //deallocate memory
@@ -153,6 +200,32 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     }
 }
 
+
+void readSector(int fd, char *sectorBuffer, int sectorNumber) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    TVMThreadID savedCurrentThread = CURRENT_THREAD;
+    
+    MachineFileSeek(fd, sectorNumber*512, 0, callbackMachineFile, &savedCurrentThread);
+    Scheduler(6,savedCurrentThread);
+    
+    MachineFileRead(fd, sectorBuffer, 512, callbackMachineFile, &savedCurrentThread);
+    Scheduler(6,savedCurrentThread);
+    
+    int result = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
+    
+    if (result < 0) {
+        cout << "ERROR in readSector" << endl;
+    }
+    else {
+        cout << "bytes read: " << result << endl;
+    }
+
+    MachineResumeSignals(&sigState);
+}
+    
+    
 void idle(void* x)  {
     while (true) {}
 }
