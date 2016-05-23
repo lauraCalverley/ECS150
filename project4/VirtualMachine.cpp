@@ -47,7 +47,7 @@ bool threadExists(TVMThreadID thread);
 void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
 void readSector(int fd, char *sectorData, int sectorNumber);
-void storeBPB(void *sectorData);
+void storeBPB(int fd);
 
     
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
@@ -100,40 +100,12 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
      
         
         
-        void *sectorData;
-        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
-
-        //readSector(fd, (char*)sectorData, 0);
-        readSector(fd, (char*)sectorData, 0);
-        storeBPB(sectorData);
-
-//        uint8_t BPB_SecPerClus = *(uint8_t *)((char*)sectorData + 13); // CITE Nitta FIXME - remove (int) cast?
-//        //    cout << "BPB_SecPerClus " << (int)BPB_SecPerClus << endl;
-//        uint16_t BPB_RsvdSecCnt = *(uint16_t *)((char*)sectorData + 14); // CITE Nitta
-//        //    cout << "BPB_RsvdSecCnt " << BPB_RsvdSecCnt << endl;
-//        uint8_t BPB_NumFATs = *(uint8_t *)((char*)sectorData + 16); // CITE Nitta FIXME - remove (int) cast?
-//        //    cout << "BPB_NumFATs " << (int)BPB_NumFATs << endl;
-//        uint16_t BPB_RootEntCnt = *(uint16_t *)((char*)sectorData + 17); // CITE Nitta
-//        //    cout << "BPB_RootEntCnt " << BPB_RootEntCnt << endl;
-//        uint16_t BPB_FATSz16 = *(uint16_t *)((char*)sectorData + 22); // CITE Nitta
-//        //    cout << "BPB_FATSz16 " << BPB_FATSz16 << endl;
-//        uint32_t BPB_TotSec32 = *(uint32_t *)((char*)sectorData + 32); // CITE Nitta
-//        //    cout << "BPB_TotSec32 " << BPB_TotSec32 << endl;
-//        
-//        
-//        int FirstRootSector = BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz16;
-//        int RootDirectorySectors = (BPB_RootEntCnt * 32) / 512;
-//        int FirstDataSector = FirstRootSector + RootDirectorySectors;
-//        int ClusterCount = (BPB_TotSec32 - FirstDataSector) / BPB_SecPerClus;
-//        
-//        cout << "FirstRootSector" << FirstRootSector << endl;
-//        cout << "RootDirectorySectors" << RootDirectorySectors << endl;
-//        cout << "FirstDataSector" << FirstDataSector << endl;
-//        cout << "ClusterCount" << ClusterCount << endl;
-//        
-//        theBPB = new BPB(BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
-//        
-        
+        storeBPB(fd);
+ 
+//        cout << "FirstRootSector" << theBPB->FirstRootSector << endl;
+//        cout << "RootDirectorySectors" << theBPB->RootDirectorySectors << endl;
+//        cout << "FirstDataSector" << theBPB->FirstDataSector << endl;
+//        cout << "ClusterCount" << theBPB->ClusterCount << endl;
         
 /*
  FAT has 4098 entries
@@ -158,7 +130,6 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         
         
         module(argc, argv);
-        VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
         VMUnloadModule();
 
         //deallocate memory
@@ -197,22 +168,17 @@ void readSector(int fd, char *sectorData, int sectorNumber) {
 //    else {
 //        cout << "bytes read: " << result << endl;
 //    }
-    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
 }
 
-void storeBPB(void *sectorData) {
+void storeBPB(int fd) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
 
-    //void *sectorData;
-    //readSector(fd, (char*)sectorData, 0);
+    void *sectorData;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
+    readSector(fd, (char*)sectorData, 0);
     
-    for (int i=0; i < 512; i++) {
-        cout << ((char*)sectorData)[i];
-    }
-    cout << endl;
-
     uint8_t BPB_SecPerClus = *(uint8_t *)((char*)sectorData + 13); // CITE Nitta FIXME - remove (int) cast?
 //    cout << "BPB_SecPerClus " << (int)BPB_SecPerClus << endl;
     uint16_t BPB_RsvdSecCnt = *(uint16_t *)((char*)sectorData + 14); // CITE Nitta
@@ -226,18 +192,8 @@ void storeBPB(void *sectorData) {
     uint32_t BPB_TotSec32 = *(uint32_t *)((char*)sectorData + 32); // CITE Nitta
 //    cout << "BPB_TotSec32 " << BPB_TotSec32 << endl;
     
-    
-    int FirstRootSector = BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz16;
-    int RootDirectorySectors = (BPB_RootEntCnt * 32) / 512;
-    int FirstDataSector = FirstRootSector + RootDirectorySectors;
-    int ClusterCount = (BPB_TotSec32 - FirstDataSector) / BPB_SecPerClus;
-    
-    cout << "FirstRootSector" << FirstRootSector << endl;
-    cout << "RootDirectorySectors" << RootDirectorySectors << endl;
-    cout << "FirstDataSector" << FirstDataSector << endl;
-    cout << "ClusterCount" << ClusterCount << endl;
-    
-    //theBPB = new BPB(BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
+    theBPB = new BPB(BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
+    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
 
     MachineResumeSignals(&sigState);
 }
