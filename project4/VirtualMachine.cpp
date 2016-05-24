@@ -13,7 +13,7 @@
 #include <queue>
 #include <stdint.h>
 
-#inlude <cstdio> //temp
+#include <cstdio> //temp
 #include <iostream> //temp
 
 extern "C" {
