@@ -220,9 +220,18 @@ void storeFAT(int fd){
     }
 
     int k = 0;
-    for(int i = 0; i < 16; i++){
+    for(int i = 0; i < 15; i++){
+        printf("%07X0: ", k);
         for(int j = 0; j < 8; j++){
-            printf("%04x ", FAT[k]);
+            if(FAT[k] == 0xffff){
+                printf("END  ");
+            }
+            else if(FAT[k] == 0){
+                printf("FREE ");
+            }
+            else{
+                printf("%04x ", FAT[k]);
+            }
             k++;
         }
         cout << endl;
