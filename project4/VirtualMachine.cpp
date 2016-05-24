@@ -219,23 +219,40 @@ void storeFAT(int fd){
         sectorNumber++;
     }
 
-    int k = 0;
-    for(int i = 0; i < 15; i++){
-        printf("%07X0: ", i);
-        for(int j = 0; j < 8; j++){
-            if(FAT[k] == 0xffff){
-                printf("END  ");
-            }
-            else if(FAT[k] == 0){
-                printf("FREE ");
-            }
-            else{
-                printf("%04X ", FAT[k]);
-            }
-            k++;
-        }
-        cout << endl;
-    }
+    // int k = 0;
+    // for(int i = 0; i < 15; i++){
+    //     printf("%07X0: ", i);
+    //     for(int j = 0; j < 8; j++){
+    //         if(FAT[k] == 0xffff){
+    //             printf("END  ");
+    //         }
+    //         else if(FAT[k] == 0){
+    //             printf("FREE ");
+    //         }
+    //         else{
+    //             printf("%04X ", FAT[k]);
+    //         }
+    //         k++;
+    //     }
+    //     cout << endl;
+    // }
+    /* ^^ result
+00000000: FFF8 END  END  0004 0005 0006 0007 0008
+00000010: 0009 000A 000B 000C 000D 000E 000F 0010
+00000020: 0011 0012 0013 0014 0015 0016 0017 0018
+00000030: 0019 001A 001B 001C END  001E END  0020
+00000040: 0021 END  0023 END  0025 0026 0027 0028
+00000050: 0029 002A END  002C 002D 002E 002F 0030
+00000060: 0031 0032 0033 0034 0035 0036 END  0038
+00000070: 0039 003A 003B 003C 003D 003E 003F 0040
+00000080: 0041 0042 END  0044 0045 0046 0047 0048
+00000090: 0049 004A 004B 004C 004D 004E 004F 0050
+000000A0: 0051 0052 0053 0054 END  0056 0057 0058
+000000B0: 0059 005A 005B 005C END  005E END  0060
+000000C0: END  END  0063 0064 END  0066 END  0068
+000000D0: END  006A 006B 006C 006D END  END  0070
+000000E0: END  FREE FREE FREE FREE FREE FREE FREE
+    */
 
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
