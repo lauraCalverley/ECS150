@@ -254,17 +254,17 @@ void storeRoot(int fd){
     readSector(fd, (char*)sectorData, sectorNumber);
     
     //sectorData now holds the sector that contains the first ROOT entry + other stuff
-    SVMDirectoryEntry entry = new SVMDirectoryEntry;
-    memcpy(&entry.DAttributes, (char *)sectorData+11, 1); //2 for null terminator??
-    memcpy(entry.DShortFileName, (char *)sectorData, 11); //12 for null terminator??
+    SVMDirectoryEntry* entry = new SVMDirectoryEntry;
+    memcpy(&entry->DAttributes, (char *)sectorData+11, 1); //2 for null terminator??
+    memcpy(entry->DShortFileName, (char *)sectorData, 11); //12 for null terminator??
 
-    if ((entry.DAttributes & '0x0F') == '0x0F') {
+    if ((entry->DAttributes & '0x0F') == '0x0F') {
         cout << "long" << endl;
-        cout << entry.DShortFileName << endl;
+        cout << entry->DShortFileName << endl;
     }
     else {
         cout << "long" << endl;
-        cout << entry.DShortFileName << endl;
+        cout << entry->DShortFileName << endl;
     }
     
     
