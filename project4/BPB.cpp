@@ -1,7 +1,8 @@
 #include "BPB.h"
 #include <stdint.h>
 
-BPB::BPB(uint8_t BPB_SecPerClus, uint16_t BPB_RsvdSecCnt, uint8_t BPB_NumFATs, uint16_t BPB_RootEntCnt, uint16_t BPB_FATSz16, uint32_t BPB_TotSec32) :
+BPB::BPB(uint16_t BPB_BytsPerSec, uint8_t BPB_SecPerClus, uint16_t BPB_RsvdSecCnt, uint8_t BPB_NumFATs, uint16_t BPB_RootEntCnt, uint16_t BPB_FATSz16, uint32_t BPB_TotSec32) :
+BPB_BytsPerSec (BPB_BytsPerSec),
 BPB_SecPerClus (BPB_SecPerClus),
 BPB_RsvdSecCnt (BPB_RsvdSecCnt),
 BPB_NumFATs (BPB_NumFATs),

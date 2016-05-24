@@ -185,7 +185,9 @@ void storeBPB(int fd) {
     void *sectorData;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
     readSector(fd, (char*)sectorData, 0);
-    
+
+    uint16_t BPB_BytsPerSec = *(uint16_t *)((char*)sectorData + 11); // CITE Nitta
+    //    cout << "BPB_BytsPerSec " << BPB_BytsPerSec << endl;
     uint8_t BPB_SecPerClus = *(uint8_t *)((char*)sectorData + 13); // CITE Nitta FIXME - remove (int) cast?
 //    cout << "BPB_SecPerClus " << (int)BPB_SecPerClus << endl;
     uint16_t BPB_RsvdSecCnt = *(uint16_t *)((char*)sectorData + 14); // CITE Nitta
@@ -199,7 +201,7 @@ void storeBPB(int fd) {
     uint32_t BPB_TotSec32 = *(uint32_t *)((char*)sectorData + 32); // CITE Nitta
 //    cout << "BPB_TotSec32 " << BPB_TotSec32 << endl;
     
-    theBPB = new BPB(BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
+    theBPB = new BPB(BPB_BytsPerSec, BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
 
     MachineResumeSignals(&sigState);
@@ -250,40 +252,72 @@ void storeRoot(int fd){
     void *sectorData;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
 
-    int sectorNumber = theBPB->FirstRootSector;
-    readSector(fd, (char*)sectorData, sectorNumber);
-    
-    //sectorData now holds the sector that contains the first ROOT entry + other stuff
-    SVMDirectoryEntry* entry = new SVMDirectoryEntry;
-    memcpy(&entry->DAttributes, (char *)sectorData+11, 1); //2 for null terminator??
-    memcpy(entry->DShortFileName, (char *)sectorData, 11); //12 for null terminator??
-
-    if ((entry->DAttributes & '0x0F') == '0x0F') {
-        cout << "long" << endl;
-        cout << entry->DShortFileName << endl;
-    }
-    else {
-        cout << "short" << endl;
-        cout << entry->DShortFileName << endl;
-    }
-    
-    
-    // if (((LDIR_attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME) && (LDIR_Ord != 0xE5)) {
-    //     /* Found an active long name sub-component. */
-    // }
-    
-        // 00?? ????
-    
-    
+    //int size = theBPB->FirstDataSector - theBPB->FirstRootSector; // # of sectors in root
+    //int rootEntryCountPerSector = theBPB->BPB_BytsPerSec / 32; // entry is always 32 bytes
 
     
+//    RootDirSectors = ((BPB_RootEntCnt * 32) + (BPB_BytsPerSec – 1)) / BPB_BytsPerSec;
     
+    SVMDirectoryEntry* entry;
+    for(int sectorNumber = theBPB->FirstRootSector; sectorNumber < theBPB->FirstDataSector; sectorNumber++){
+        readSector(fd, (char*)sectorData, sectorNumber);
+        
+        for (int j = 0; j < theBPB->BPB_BytsPerSec; j+= 32){ // j is the starting byte of the entry
+            //            ROOT.push_back(*(uint32_t *)((char*)sectorData + j));
+            
+            entry = new SVMDirectoryEntry;
+            memcpy(&entry->DAttributes, (char *)sectorData+j+11, 1);
+
+//            cout << "ATTRIBUTES: ";
+//            printf("%X ", entry->DAttributes);
+//            cout << endl;
+            
+            if ((entry->DAttributes & 0x0F) == 0x0F) {
+//                cout << "long" << endl;
+            }
+            else {
+                cout << "short: " << j << endl;
+                char *namePtr;
+                char *extPtr;
+                
+                char fileName[8];
+                char *dummy1;
+                char *dummy2;
+                memcpy(fileName, (char *)sectorData+j, 8);
+                namePtr = strtok_r(fileName, " ", &dummy1); // returns a ptr that points to the first byte of the file extension
+                cout << namePtr << endl;
+
+                char fileExt[3];
+                memcpy(fileExt, (char *)sectorData+j+8, 3);
+                if (fileExt[0] != ' ') {
+                    extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
+                    cout << extPtr << endl;
+                    strcat(namePtr, ".");
+                    strcat(namePtr, extPtr);
+                }
+                cout << namePtr << endl;
+                
+//                cout << fileName << endl;
+//                cout << fileExt << endl;
+                
+                
+//                memcpy(entry->DShortFileName, fileName, strlen(fileName));
+//                memcpy(&(entry->DShortFileName[strlen(fileName)]), ".", 1);
+//                memcpy(&(entry->DShortFileName[strlen(fileName)+1]), fileExt, strlen(fileExt));
+//
+//                cout << entry->DShortFileName << endl;
+
+
+                
+                
+                
+                
+            }
+            
+        }
+        
+    }
     
-    
-    
-    
-//    int size = theBPB->FirstDataSector - theBPB->FirstRootSector; // # of bytes in root
-//    int entryCount = size / 32; // # of entries in root
 
     
     
@@ -313,18 +347,6 @@ void storeRoot(int fd){
     
     
     
-//    for(int i = 0; i < size; i++){
-//        readSector(fd, (char*)sectorData, sectorNumber);
-//
-//        for(int j = 0; j < 512; j += 32){
-////            ROOT.push_back(*(uint32_t *)((char*)sectorData + j));
-//            
-//            
-//        }
-//
-//        sectorNumber++;
-//    }
-//
     //test
 //    for(int i = 0; i < ROOT.size(); i++){
 //        cout << ROOT[i] << endl;

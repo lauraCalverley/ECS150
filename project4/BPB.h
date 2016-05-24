@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 class BPB {
-        public:
+    public:
+        uint16_t BPB_BytsPerSec;
         uint8_t BPB_SecPerClus;
         uint16_t BPB_RsvdSecCnt;
         uint8_t BPB_NumFATs;
@@ -17,7 +18,7 @@ class BPB {
         int FirstDataSector;
         int ClusterCount;
         
-        BPB(uint8_t BPB_SecPerClus, uint16_t BPB_RsvdSecCnt, uint8_t BPB_NumFATs,
+        BPB(uint16_t BPB_BytsPerSec, uint8_t BPB_SecPerClus, uint16_t BPB_RsvdSecCnt, uint8_t BPB_NumFATs,
             uint16_t BPB_RootEntCnt, uint16_t BPB_FATSz16, uint32_t BPB_TotSec32);
 };
 
