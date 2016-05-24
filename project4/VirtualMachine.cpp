@@ -35,6 +35,7 @@ TVMMemorySize HEAP_BASE_SIZE = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 BPB *theBPB;
+vector<uint16_t> FAT;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -48,6 +49,7 @@ void entrySkeleton(void *thread);
 void Scheduler(int transition, TVMThreadID thread);
 void readSector(int fd, char *sectorData, int sectorNumber);
 void storeBPB(int fd);
+void storeFAT(int fd);
 
     
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
@@ -67,7 +69,6 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
-        cout << "failed to load module" << endl;
         return VM_STATUS_FAILURE;
     }
     else {
@@ -94,7 +95,6 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         int fd = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
         
         if (fd < 0) {
-            cout << "failed to open image" << endl;
             return VM_STATUS_FAILURE;
         }
         
@@ -103,6 +103,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         
         
         storeBPB(fd);
+        storeFAT(fd);
  
 //        cout << "FirstRootSector" << theBPB->FirstRootSector << endl;
 //        cout << "RootDirectorySectors" << theBPB->RootDirectorySectors << endl;
@@ -197,6 +198,29 @@ void storeBPB(int fd) {
     theBPB = new BPB(BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
 
+    MachineResumeSignals(&sigState);
+}
+
+void storeFAT(int fd){
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    void *sectorData;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
+
+    int sectorNumber = 1;
+    int size = theBPB->BPB_FATSz16;
+    for(int i = 0; i < size; i++){
+        readSector(fd, (char*)sectorData, sectorNumber);
+        for(int j = 0; j < 512; j += 2){
+            FAT.push_back(*(uint16_t)((char*)sectorData + j));
+        }
+
+        sectorNumber++;
+    }
+
+    cout << "FAT size: " << FAT.size() << endl;
+
+    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
 }
     
