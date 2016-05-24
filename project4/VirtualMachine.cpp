@@ -259,13 +259,11 @@ void storeRoot(int fd){
     memcpy(entry->DShortFileName, (char *)sectorData, 11); //12 for null terminator??
 
     if ((entry->DAttributes & '0x0F') == '0x0F') {
-        cout << "??" << endl;
-        cout << "entry->DAttributes: " << entry->DAttributes << endl;
         cout << "long" << endl;
         cout << entry->DShortFileName << endl;
     }
     else {
-        cout << "long" << endl;
+        cout << "short" << endl;
         cout << entry->DShortFileName << endl;
     }
     
