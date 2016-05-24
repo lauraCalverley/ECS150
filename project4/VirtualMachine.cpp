@@ -37,6 +37,7 @@ const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 BPB *theBPB;
 vector<uint16_t> FAT;
+vector<uint16_t> ROOT;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -51,6 +52,7 @@ void Scheduler(int transition, TVMThreadID thread);
 void readSector(int fd, char *sectorData, int sectorNumber);
 void storeBPB(int fd);
 void storeFAT(int fd);
+void storeRoot(int fd);
 
     
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
@@ -105,6 +107,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         
         storeBPB(fd);
         storeFAT(fd);
+        storeRoot(fd);
  
 //        cout << "FirstRootSector" << theBPB->FirstRootSector << endl;
 //        cout << "RootDirectorySectors" << theBPB->RootDirectorySectors << endl;
@@ -253,6 +256,32 @@ void storeFAT(int fd){
 000000D0: END  006A 006B 006C 006D END  END  0070
 000000E0: END  FREE FREE FREE FREE FREE FREE FREE
     */
+
+    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+    MachineResumeSignals(&sigState);
+}
+
+void storeRoot(int fd){
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    void *sectorData;
+    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
+
+    int sectorNumber = 1;
+    int size = theBPB->FirstDataSector - theBPB->FirstRootSector;
+    for(int i = 0; i < size; i++){
+        readSector(fd, (char*)sectorData, sectorNumber);
+        for(int j = 0; j < 512; j += 4){
+            ROOT.push_back(*(uint32_t *)((char*)sectorData + j));
+        }
+
+        sectorNumber++;
+    }
+
+    //test
+    for(int i = 0; i < ROOT.size(); i++){
+        cout << ROOT[i] << endl;
+    }
 
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
