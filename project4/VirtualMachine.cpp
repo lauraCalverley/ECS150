@@ -67,6 +67,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
     MachineRequestAlarm(tickms*1000, callbackMachineRequestAlarm, NULL);
     TVMMainEntry module = VMLoadModule(argv[0]);
     if (module == NULL) {
+        cout << "failed to load module" << endl;
         return VM_STATUS_FAILURE;
     }
     else {
@@ -93,6 +94,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         int fd = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
         
         if (fd < 0) {
+            cout << "failed to open image" << endl;
             return VM_STATUS_FAILURE;
         }
         
