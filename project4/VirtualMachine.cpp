@@ -212,7 +212,7 @@ void storeFAT(int fd){
     for(int i = 0; i < size; i++){
         readSector(fd, (char*)sectorData, sectorNumber);
         for(int j = 0; j < 512; j += 2){
-            FAT.push_back(*(uint16_t)((char*)sectorData + j));
+            FAT.push_back(*(uint16_t *)((char*)sectorData + j));
         }
 
         sectorNumber++;
