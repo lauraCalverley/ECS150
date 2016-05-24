@@ -13,6 +13,7 @@
 #include <queue>
 #include <stdint.h>
 
+#inlude <cstdio> //temp
 #include <iostream> //temp
 
 extern "C" {
@@ -218,7 +219,14 @@ void storeFAT(int fd){
         sectorNumber++;
     }
 
-    cout << "FAT size: " << FAT.size() << endl;
+    int k = 0;
+    for(int i = 0; i < 16; i++){
+        for(int j = 0; j < 8; j++){
+            printf("%x2", FAT[k]);
+            k++;
+        }
+        cout << endl;
+    }
 
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
