@@ -221,7 +221,7 @@ void storeFAT(int fd){
 
     int k = 0;
     for(int i = 0; i < 15; i++){
-        printf("%07X0: ", k);
+        printf("%07X0: ", i);
         for(int j = 0; j < 8; j++){
             if(FAT[k] == 0xffff){
                 printf("END  ");
@@ -230,7 +230,7 @@ void storeFAT(int fd){
                 printf("FREE ");
             }
             else{
-                printf("%04x ", FAT[k]);
+                printf("%04X ", FAT[k]);
             }
             k++;
         }
