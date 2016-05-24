@@ -255,7 +255,7 @@ void storeRoot(int fd){
     
     //sectorData now holds the sector that contains the first ROOT entry + other stuff
     SVMDirectoryEntry entry = new SVMDirectoryEntry;
-    memcpy(entry.DAttributes, (char *)sectorData+11, 1); //2 for null terminator??
+    memcpy(&entry.DAttributes, (char *)sectorData+11, 1); //2 for null terminator??
     memcpy(entry.DShortFileName, (char *)sectorData, 11); //12 for null terminator??
 
     if ((entry.DAttributes & '0x0F') == '0x0F') {
