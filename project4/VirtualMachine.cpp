@@ -268,9 +268,9 @@ void storeRoot(int fd){
     }
     
     
-    if (((LDIR_attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME) && (LDIR_Ord != 0xE5)) {
-        /* Found an active long name sub-component. */
-    }
+    // if (((LDIR_attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME) && (LDIR_Ord != 0xE5)) {
+    //     /* Found an active long name sub-component. */
+    // }
     
         // 00?? ????
     
