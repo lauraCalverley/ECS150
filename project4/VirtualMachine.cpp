@@ -267,7 +267,7 @@ void storeRoot(int fd){
         
         for (int j = 0; j < theBPB->BPB_BytsPerSec; j+= 32){ // j is the starting byte of the entry
             //            ROOT.push_back(*(uint32_t *)((char*)sectorData + j));
-            cout << "j: " << endl;
+            cout << "j: " << j << endl;
             entry = new SVMDirectoryEntry;
             memcpy(&entry->DAttributes, (char *)sectorData+j+11, 1);
 
