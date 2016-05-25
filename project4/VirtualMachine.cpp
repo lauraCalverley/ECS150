@@ -293,6 +293,9 @@ void storeRoot(int fd){
                 if(namePtr == '\0'){
                     cout << "empty entry" << endl;
                 }
+                else{
+                    cout << "not empty" << endl;
+                }
 
                 char fileExt[4] = "";
                 memcpy(fileExt, (char *)sectorData+j+8, 3);
