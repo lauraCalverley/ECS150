@@ -292,6 +292,7 @@ void storeRoot(int fd){
                 // cout << namePtr << endl;
                 if(namePtr == '\0'){
                     cout << "empty entry" << endl;
+                    continue;
                 }
                 else{
                     cout << "not empty" << endl;
