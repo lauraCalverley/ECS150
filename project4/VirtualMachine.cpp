@@ -281,7 +281,7 @@ void storeRoot(int fd){
                 char *extPtr;
                 
                 char fileName[8] = "";
-                cout << "filename: " << filename << endl;
+                cout << "filename: " << fileName << endl;
                 char *dummy1;
                 char *dummy2;
                 memcpy(fileName, (char *)sectorData+j, 8);
