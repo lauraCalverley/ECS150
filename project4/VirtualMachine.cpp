@@ -292,7 +292,7 @@ void storeRoot(int fd){
                 // cout << namePtr << endl;
                 if(namePtr == '\0'){
                     cout << "empty entry" << endl;
-                    // continue;
+                    continue;
                 }
                 else{
                     cout << "not empty" << endl;
@@ -309,7 +309,7 @@ void storeRoot(int fd){
                         strcat(namePtr, extPtr);
                     }
                 }
-                // cout << namePtr << endl;
+                cout << namePtr << endl;
                 
 //                cout << fileName << endl;
 //                cout << fileExt << endl;
