@@ -300,6 +300,7 @@ void storeRoot(int fd){
                 if (fileExt[0] != ' ') {
                     extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
                     // cout << extPtr << endl;
+                    cout << "test" << endl;
                     strcat(namePtr, ".");
                     strcat(namePtr, extPtr);
                 }
