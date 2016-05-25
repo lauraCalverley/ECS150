@@ -289,8 +289,10 @@ void storeRoot(int fd){
                 memcpy(fileName, (char *)sectorData+j, 8);
                 fileName[8] = '\0';
                 namePtr = strtok_r(fileName, " ", &dummy1); // returns a ptr that points to the first byte of the file extension
-                cout << namePtr << endl;
-                cout << "test" << endl;
+                // cout << namePtr << endl;
+                if(namePtr == '\0'){
+                    cout << "empty entry" << endl;
+                }
 
                 char fileExt[4] = "";
                 memcpy(fileExt, (char *)sectorData+j+8, 3);
