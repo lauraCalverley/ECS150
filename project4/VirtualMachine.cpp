@@ -262,8 +262,8 @@ void storeRoot(int fd){
     cout << "FirstRootSector: " << theBPB->FirstRootSector << endl;
     cout << "FirstDataSector: " << theBPB->FirstDataSector << endl;
     for(int sectorNumber = theBPB->FirstRootSector; sectorNumber < theBPB->FirstDataSector; sectorNumber++){
-        readSector(fd, (char*)sectorData, sectorNumber);
         cout << "sectorNumber: " << sectorNumber << endl;
+        readSector(fd, (char*)sectorData, sectorNumber);
         
         for (int j = 0; j < theBPB->BPB_BytsPerSec; j+= 32){ // j is the starting byte of the entry
             //            ROOT.push_back(*(uint32_t *)((char*)sectorData + j));
