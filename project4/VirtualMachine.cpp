@@ -259,6 +259,8 @@ void storeRoot(int fd){
 //    RootDirSectors = ((BPB_RootEntCnt * 32) + (BPB_BytsPerSec – 1)) / BPB_BytsPerSec;
     
     SVMDirectoryEntry* entry;
+    cout << "FirstRootSector: " << theBPB->FirstRootSector << endl;
+    cout << "FirstDataSector: " << theBPB->FirstDataSector << endl;
     for(int sectorNumber = theBPB->FirstRootSector; sectorNumber < theBPB->FirstDataSector; sectorNumber++){
         readSector(fd, (char*)sectorData, sectorNumber);
         cout << "sectorNumber: " << sectorNumber << endl;
