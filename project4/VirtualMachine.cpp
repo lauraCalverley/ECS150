@@ -305,7 +305,7 @@ void storeRoot(int fd){
                         strcat(namePtr, extPtr);
                     }
                 }
-                // cout << namePtr << endl;
+                cout << namePtr << endl;
                 
 //                cout << fileName << endl;
 //                cout << fileExt << endl;
