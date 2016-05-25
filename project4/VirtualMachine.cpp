@@ -281,16 +281,16 @@ void storeRoot(int fd){
                 char *extPtr;
                 
                 char fileName[8] = "";
-                cout << "filename: " << fileName << endl;
                 char *dummy1;
                 char *dummy2;
                 memcpy(fileName, (char *)sectorData+j, 8);
+                cout << "filename: " << fileName << endl;
                 namePtr = strtok_r(fileName, " ", &dummy1); // returns a ptr that points to the first byte of the file extension
                 cout << namePtr << endl;
 
                 char fileExt[3] = "";
-                cout << "fileExt: " << fileExt << endl;
                 memcpy(fileExt, (char *)sectorData+j+8, 3);
+                cout << "fileExt: " << fileExt << endl;
                 if (fileExt[0] != ' ') {
                     extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
                     cout << extPtr << endl;
