@@ -8,6 +8,7 @@
 #include "Mutex.h"
 #include "MemoryPool.h"
 #include "BPB.h"
+#include "Entry.h"
 #include <cstring>
 #include <vector>
 #include <queue>
@@ -38,7 +39,7 @@ const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 BPB *theBPB;
 vector<uint16_t> FAT;
-vector<SVMDirectoryEntryRef> ROOT;
+vector<Entry*> ROOT;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -254,6 +255,7 @@ void storeRoot(int fd){
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
 
     SVMDirectoryEntryRef entry;
+    Entry *theEntry;
     for(int sectorNumber = theBPB->FirstRootSector; sectorNumber < theBPB->FirstDataSector; sectorNumber++){
         readSector(fd, (char*)sectorData, sectorNumber);
         
@@ -353,7 +355,11 @@ void storeRoot(int fd){
                     entry->DAccess = access;
                     entry->DModify = modify;
                     
-                    ROOT.push_back(entry);
+                    uint16_t firstClusterStart;
+                    memcpy(&firstClusterStart, (char *)sectorData+j+26, 2);
+                    
+                    theEntry = new Entry(*entry, firstClusterStart); // FIXME perhaps change entry to be a non-ref
+                    ROOT.push_back(theEntry);
                     
                 }
             }
@@ -600,7 +606,6 @@ TVMStatus VMTickCount(TVMTickRef tickref) {
     }
 }
 
-    
     
 TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     TMachineSignalState sigState;
