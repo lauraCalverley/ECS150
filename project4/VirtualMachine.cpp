@@ -15,6 +15,7 @@
 
 #include <cstdio> //temp
 #include <iostream> //temp
+#include <bitset> // temp
 
 extern "C" {
 using namespace std;
@@ -37,7 +38,7 @@ const TVMMemoryPoolID VM_MEMORY_POOL_ID_SYSTEM = 0;
 const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 BPB *theBPB;
 vector<uint16_t> FAT;
-vector<SVMDirectoryEntry> ROOT;
+vector<SVMDirectoryEntryRef> ROOT;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -252,34 +253,15 @@ void storeRoot(int fd){
     void *sectorData;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
 
-    //int size = theBPB->FirstDataSector - theBPB->FirstRootSector; // # of sectors in root
-    //int rootEntryCountPerSector = theBPB->BPB_BytsPerSec / 32; // entry is always 32 bytes
-
-    
-//    RootDirSectors = ((BPB_RootEntCnt * 32) + (BPB_BytsPerSec – 1)) / BPB_BytsPerSec;
-    
-    SVMDirectoryEntry* entry;
-    cout << "FirstRootSector: " << theBPB->FirstRootSector << endl;
-    cout << "FirstDataSector: " << theBPB->FirstDataSector << endl;
+    SVMDirectoryEntryRef entry;
     for(int sectorNumber = theBPB->FirstRootSector; sectorNumber < theBPB->FirstDataSector; sectorNumber++){
-        cout << "sectorNumber: " << sectorNumber << endl;
         readSector(fd, (char*)sectorData, sectorNumber);
         
         for (int j = 0; j < theBPB->BPB_BytsPerSec; j+= 32){ // j is the starting byte of the entry
-            //            ROOT.push_back(*(uint32_t *)((char*)sectorData + j));
-            cout << "j: " << j << endl;
             entry = new SVMDirectoryEntry;
             memcpy(&entry->DAttributes, (char *)sectorData+j+11, 1);
-
-//            cout << "ATTRIBUTES: ";
-//            printf("%X ", entry->DAttributes);
-//            cout << endl;
             
-            if ((entry->DAttributes & 0x0F) == 0x0F) {
-//                cout << "long" << endl;
-            }
-            else {
-                cout << "short: " << j << endl;
+            if ((entry->DAttributes & 0x0F) != 0x0F) {
                 char *namePtr;
                 char *extPtr;
                 
@@ -289,83 +271,95 @@ void storeRoot(int fd){
                 memcpy(fileName, (char *)sectorData+j, 8);
                 fileName[8] = '\0';
                 namePtr = strtok_r(fileName, " ", &dummy1); // returns a ptr that points to the first byte of the file extension
-                // cout << namePtr << endl;
-                if(namePtr == '\0'){
-                    cout << "empty entry" << endl;
-                    continue;
-                }
-                else{
-                    cout << "not empty" << endl;
-                }
-
-                char fileExt[4] = "";
-                memcpy(fileExt, (char *)sectorData+j+8, 3);
-                fileExt[3] = '\0';
-                if (fileExt[0] != ' ') {
-                    extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
-                    // cout << extPtr << endl;
-                    if(extPtr != '\0'){
-                        strcat(namePtr, ".");
-                        strcat(namePtr, extPtr);
+                if(namePtr != '\0'){ // valid SHORT entry
+                    char fileExt[4] = "";
+                    memcpy(fileExt, (char *)sectorData+j+8, 3);
+                    fileExt[3] = '\0';
+                    if (fileExt[0] != ' ') {
+                        extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
+                        if(extPtr != '\0'){
+                            strcat(namePtr, ".");
+                            strcat(namePtr, extPtr);
+                        }
                     }
+                    memcpy(entry->DShortFileName, namePtr, strlen(namePtr));
+                    memcpy(&(entry->DSize), (char *)sectorData+j+28, 4);
+
+                    SVMDateTime create;
+                    SVMDateTime access;
+                    SVMDateTime modify;
+                    
+                    uint16_t createDate;
+                    memcpy(&createDate, (char *)sectorData+j+16, 2);
+
+                    // 0-4 day of month: range 1-31
+                    // 5-8 month of year: range 1-12
+                    // 9-15 number of years since 1980: range 0-127
+                    create.DDay = createDate & 0x001F; // or 0x001F
+                    create.DMonth = (createDate & 0x01E0) >> 5;
+                    create.DYear = ((createDate & 0xFE00) >> 9)+ 1980;
+                    uint16_t time;
+                    memcpy(&time, (char *)sectorData+j+14, 2);
+                    create.DSecond = (time & 0x1F) * 2;
+                    create.DMinute = (time & 0x7E0) >> 5;
+                    create.DHour = (time & 0xF800) >> 11;
+                    
+                    memcpy(&create.DHundredth, (char *)sectorData+j+13, 1); // add 1 second if necessary then % 100
+                    
+                    create.DSecond += (create.DHundredth / 100);
+                    create.DHundredth = create.DHundredth % 100;
+//                    cout << "CREATE" << endl;
+//                   VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",create.DYear, create.DMonth, create.DDay, (create.DHour % 12) ? (create.DHour % 12) : 12 , create.DMinute, create.DSecond, create.DHundredth, create.DHour >= 12 ? "PM" : "AM");
+                    
+                           
+                    uint16_t accessDate;
+                    memcpy(&accessDate, (char *)sectorData+j+18, 2);
+                    
+                    // 0-4 day of month: range 1-31
+                    // 5-8 month of year: range 1-12
+                    // 9-15 number of years since 1980: range 0-127
+                    access.DDay = accessDate & 0x001F; // or 0x001F
+                    access.DMonth = (accessDate & 0x01E0) >> 5;
+                    access.DYear = ((accessDate & 0xFE00) >> 9)+ 1980;
+
+                    access.DSecond = 0;
+                    access.DMinute = 0;
+                    access.DHour = 0;
+                    access.DHundredth = 0;
+//                    cout << "ACCESS" << endl;
+//                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
+                    
+                    uint16_t modifyDate;
+                    memcpy(&modifyDate, (char *)sectorData+j+24, 2);
+                    
+                    // 0-4 day of month: range 1-31
+                    // 5-8 month of year: range 1-12
+                    // 9-15 number of years since 1980: range 0-127
+                    modify.DDay = modifyDate & 0x001F; // or 0x001F
+                    modify.DMonth = (modifyDate & 0x01E0) >> 5;
+                    modify.DYear = ((modifyDate & 0xFE00) >> 9)+ 1980;
+                    uint16_t modifyTime;
+                    memcpy(&modifyTime, (char *)sectorData+j+22, 2);
+                    modify.DSecond = (modifyTime & 0x1F) * 2;
+                    modify.DMinute = (modifyTime & 0x7E0) >> 5;
+                    modify.DHour = (modifyTime & 0xF800) >> 11;
+                    
+                    modify.DHundredth = 0;
+//                    cout << "MODIFY" << endl;
+//                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",modify.DYear, modify.DMonth, modify.DDay, (modify.DHour % 12) ? (modify.DHour % 12) : 12 , modify.DMinute, modify.DSecond, modify.DHundredth, modify.DHour >= 12 ? "PM" : "AM");
+//                    cout << endl;
+
+                    entry->DCreate = create;
+                    entry->DAccess = access;
+                    entry->DModify = modify;
+                    
+                    ROOT.push_back(entry);
+                    
                 }
-                cout << namePtr << endl;
-                
-//                cout << fileName << endl;
-//                cout << fileExt << endl;
-                
-                
-//                memcpy(entry->DShortFileName, fileName, strlen(fileName));
-//                memcpy(&(entry->DShortFileName[strlen(fileName)]), ".", 1);
-//                memcpy(&(entry->DShortFileName[strlen(fileName)+1]), fileExt, strlen(fileExt));
-//
-//                cout << entry->DShortFileName << endl;
-
-
-                
-                
-                
-                
             }
-            
         }
-        
     }
     
-
-    
-    
-//    typedef struct{
-//        unsigned int DYear;
-//        unsigned char DMonth;
-//        unsigned char DDay;
-//        unsigned char DHour;
-//        unsigned char DMinute;
-//        unsigned char DSecond;
-//        unsigned char DHundredth;
-//    } SVMDateTime, *SVMDateTimeRef;
-//    
-//    typedef struct{
-//        char DLongFileName[VM_FILE_SYSTEM_MAX_PATH];
-//        char DShortFileName[VM_FILE_SYSTEM_SFN_SIZE];
-//        unsigned int DSize;
-//        unsigned char DAttributes;
-//        SVMDateTime DCreate;
-//        SVMDateTime DAccess;
-//        SVMDateTime DModify;
-//    } SVMDirectoryEntry, *SVMDirectoryEntryRef;
-    
-
-    
-    
-    
-    
-    
-    //test
-//    for(int i = 0; i < ROOT.size(); i++){
-//        cout << ROOT[i] << endl;
-//    }
-
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
 }
