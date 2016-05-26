@@ -40,6 +40,8 @@ const TVMMemoryPoolID VM_MEMORY_POOL_ID_SHARED_MEMORY = 1;
 BPB *theBPB;
 vector<uint16_t> FAT;
 vector<Entry*> ROOT;
+vector<Entry*> openEntries;
+int NEXT_FILE_DESCRIPTOR = 3;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -660,6 +662,8 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     return VM_STATUS_SUCCESS;
 }
 
+//    VMFileOpen("test.txt", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
+//    for now, assume that the filename is in the cwd=root and file exists
 TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -668,13 +672,42 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
-    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    MachineFileOpen(filename, flags, mode, callbackMachineFile, &savedCURRENTTHREAD);
-    Scheduler(6,CURRENT_THREAD);
-
-    *filedescriptor = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
-    if (*filedescriptor < 0) {
+    int currentCluster;
+    
+    for (int i=0; i < ROOT.size(); i++) {
+        if ((ROOT[i]->e.DShortFileName) == filename) {
+            currentCluster = ROOT[i]->firstClusterNumber;
+            // check for corruption - start with (ROOT[i]->firstClusterNumber and follow the FAT cells till 0xFFFF; corrupted = 0xFFF7
+            while (currentCluster != 0xFFFF) {
+                if (currentCluster == 0xFFF7) {
+                    MachineResumeSignals(&sigState);
+                    return VM_STATUS_FAILURE; // file is corrupted - do not open
+                }
+                else {
+                    currentCluster = FAT[currentCluster];
+                }
+            }
+            
+            // TO DO check permissions of file and permissions of VMFileOpen call are compatible
+            
+            // create and save file descriptor
+            ROOT[i]->descriptor = NEXT_FILE_DESCRIPTOR++;
+            openEntries.push_back(ROOT[i]);
+            
+            *filedescriptor = ROOT[i]->descriptor;
+        }
+    }
+    
+    // SCHEDULE SOMEWHERE???
+    
+//    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+//    MachineFileOpen(filename, flags, mode, callbackMachineFile, &savedCURRENTTHREAD);
+//    Scheduler(6,CURRENT_THREAD);
+//
+//    *filedescriptor = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    
+    if (*filedescriptor < 3) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_FAILURE;
     }
