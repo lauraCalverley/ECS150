@@ -741,6 +741,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
 
         Entry* newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
         ROOT.push_back(newEntry);
+        openEntries.push_back(newEntry);
         *filedescriptor = ROOT[ROOT.size()-1]->descriptor;
     }
     
@@ -766,11 +767,13 @@ TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset)
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
 
-    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    MachineFileSeek(filedescriptor, offset, whence, callbackMachineFile, &savedCURRENTTHREAD);
-    Scheduler(6,CURRENT_THREAD);
-
-    *newoffset = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    for
+    
+//    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+//    MachineFileSeek(filedescriptor, offset, whence, callbackMachineFile, &savedCURRENTTHREAD);
+//    Scheduler(6,CURRENT_THREAD);
+//
+//    *newoffset = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
 
     if (*newoffset < 0) {
         MachineResumeSignals(&sigState);
@@ -840,20 +843,35 @@ TVMStatus VMFileClose(int filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
 
-    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    MachineFileClose(filedescriptor, callbackMachineFile, &savedCURRENTTHREAD);
-    Scheduler(6,CURRENT_THREAD);
+    for (int i=0; i < openEntries.size(); i++) {
+        if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
+            openEntries[i]->descriptor = -1;
+            openEntries[i]->fileOffset = 0;
+            openEntries.erase(openEntries.begin()+i);
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+    }
 
-    int status = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_FAILURE;
+
     
-    if (status < 0) {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_FAILURE;
-    }
-    else {
-        MachineResumeSignals(&sigState);
-        return VM_STATUS_SUCCESS;
-    }
+    
+//    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+//    MachineFileClose(filedescriptor, callbackMachineFile, &savedCURRENTTHREAD);
+//    Scheduler(6,CURRENT_THREAD);
+//
+//    int status = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    
+//    if (status < 0) {
+//        MachineResumeSignals(&sigState);
+//        return VM_STATUS_FAILURE;
+//    }
+//    else {
+//        MachineResumeSignals(&sigState);
+//        return VM_STATUS_SUCCESS;
+//    }
 }
 
 
