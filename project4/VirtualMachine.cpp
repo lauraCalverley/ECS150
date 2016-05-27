@@ -715,7 +715,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
     if(!fileFound){
         //create SVMDirectoryEntry
         SVMDirectoryEntry newDirEntry;
-        newDirEntry.DShortFileName = *filename;
+        newDirEntry.DShortFileName = filename;
         newDirEntry.DSize = 0;
         newDirEntry.DAttributes = 0x00;
         SVMDateTimeRef date;
