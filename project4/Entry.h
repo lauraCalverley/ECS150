@@ -2,7 +2,6 @@
 #define ENTRY_HEADER
 
 #include "VirtualMachine.h"
-#include <string>
 
 class Entry {
     
@@ -11,6 +10,8 @@ public:
     int firstClusterNumber;
     int descriptor;
     bool directory;
+    bool writeable;
+    int fileOffset;
     
     Entry(SVMDirectoryEntry e, int firstClusterNumber, int descriptor = -1);
 };

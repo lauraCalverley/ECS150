@@ -673,10 +673,11 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     
+    bool fileFound = 0;
     int currentCluster;
     
     for (int i=0; i < ROOT.size(); i++) {
-        if ((ROOT[i]->e.DShortFileName) == filename) {
+        if ((ROOT[i]->e.DShortFileName) == filename) { //find matching file -- ROOT[i]
             currentCluster = ROOT[i]->firstClusterNumber;
             // check for corruption - start with (ROOT[i]->firstClusterNumber and follow the FAT cells till 0xFFFF; corrupted = 0xFFF7
             while (currentCluster != 0xFFFF) {
@@ -690,13 +691,54 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
             }
             
             // TO DO check permissions of file and permissions of VMFileOpen call are compatible
+            // flags used by given apps: o_rdonly, o_creat | o_trunc | o_rdwr
+            //    o_creat: if file needs to be created it is created using the mode bits passed in
+            //    o_trunc: file is truncated to length 0
+            if((flags & O_RDWR) == 1){
+                ROOT[i]->writeable = 1;
+            }
+            else{
+                ROOT[i]->writeable = 0;
+            }
             
             // create and save file descriptor
             ROOT[i]->descriptor = NEXT_FILE_DESCRIPTOR++;
             openEntries.push_back(ROOT[i]);
             
             *filedescriptor = ROOT[i]->descriptor;
+            fileFound = 1;
+            break;
         }
+    }
+
+    //if file not found create it
+    if(!fileFound){
+        //create SVMDirectoryEntry
+        SVMDirectoryEntry newDirEntry;
+        newDirEntry.DShortFileName = *filename;
+        newDirEntry.DSize = 0;
+        newDirEntry.DAttributes = 0x00;
+        SVMDateTime date;
+        if(VM_STATUS_SUCCESS != VMDateTime(date)){
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_FAILURE;
+        }
+        newDirEntry.DCreate = date;
+        newDirEntry.DAccess = date;
+        newDirEntry.DModify = date;    
+
+        //find first cluster number and replace fat with fff8
+        int clusterNum;
+        for(int i = 0; i < FAT.size(); i++){
+            if(FAT[i] == 0x0000){
+                clusterNum = i;
+                FAT[i] = 0xfff8;
+            }
+        }
+
+        //create Entry and push to root vector/directory
+        Entry newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
+        ROOT.push_back(&newEntry);
     }
     
     // SCHEDULE SOMEWHERE???
