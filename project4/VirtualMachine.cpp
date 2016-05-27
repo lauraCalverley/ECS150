@@ -712,7 +712,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
     }
 
     //if file not found create it
-    if(!fileFound){
+    if(fileFound == 0){
         //create SVMDirectoryEntry
         SVMDirectoryEntry newDirEntry;
         // newDirEntry.DShortFileName = *filename;
@@ -724,22 +724,24 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
+
         newDirEntry.DCreate = *date;
         newDirEntry.DAccess = *date;
         newDirEntry.DModify = *date;    
 
-        //find first cluster number and replace fat with fff8
+        //find first free cluster number and replace fat with fff8
         int clusterNum;
         for(int i = 0; i < FAT.size(); i++){
             if(FAT[i] == 0x0000){
                 clusterNum = i;
                 FAT[i] = 0xfff8;
+                break;
             }
         }
 
-        //create Entry and push to root vector/directory
         Entry* newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
         ROOT.push_back(newEntry);
+        *filedescriptor = ROOT[ROOT.size()-1]->descriptor;
     }
     
     // SCHEDULE SOMEWHERE???
