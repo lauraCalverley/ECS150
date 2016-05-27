@@ -7,6 +7,6 @@ Entry::Entry(SVMDirectoryEntry e, int firstClusterNumber, int descriptor) :
     descriptor (descriptor)
 {
     directory = e.DAttributes & 0x10;
-    writable = 0;
+    writeable = 0;
     fileOffset = 0;
 }
