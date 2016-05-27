@@ -718,14 +718,14 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         newDirEntry.DShortFileName = *filename;
         newDirEntry.DSize = 0;
         newDirEntry.DAttributes = 0x00;
-        SVMDateTime date;
+        SVMDateTimeRef date;
         if(VM_STATUS_SUCCESS != VMDateTime(date)){
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
-        newDirEntry.DCreate = date;
-        newDirEntry.DAccess = date;
-        newDirEntry.DModify = date;    
+        newDirEntry.DCreate = *date;
+        newDirEntry.DAccess = *date;
+        newDirEntry.DModify = *date;    
 
         //find first cluster number and replace fat with fff8
         int clusterNum;
