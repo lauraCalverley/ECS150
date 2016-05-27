@@ -766,14 +766,28 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
 TVMStatus VMFileSeek(int filedescriptor, int offset, int whence, int *newoffset) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-
-    for
     
-//    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-//    MachineFileSeek(filedescriptor, offset, whence, callbackMachineFile, &savedCURRENTTHREAD);
-//    Scheduler(6,CURRENT_THREAD);
-//
-//    *newoffset = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    if (filedescriptor < 3) {
+            TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+            MachineFileSeek(filedescriptor, offset, whence, callbackMachineFile, &savedCURRENTTHREAD);
+            Scheduler(6,CURRENT_THREAD);
+        
+            *newoffset = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+    }
+    else {
+        for (int i=0; i < openEntries.size(); i++) {
+            if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
+                if ((whence + offset) <= openEntries[i]->e.DSize) {
+                    openEntries[i]->fileOffset = whence + offset;
+                    *newoffset = openEntries[i]->fileOffset;
+                }
+                else {
+                    *newoffset = -1;
+                }
+                break;
+            }
+        }
+    }
 
     if (*newoffset < 0) {
         MachineResumeSignals(&sigState);
