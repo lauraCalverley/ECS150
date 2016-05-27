@@ -737,8 +737,8 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         }
 
         //create Entry and push to root vector/directory
-        Entry newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
-        ROOT.push_back(&newEntry);
+        Entry* newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
+        ROOT.push_back(newEntry);
     }
     
     // SCHEDULE SOMEWHERE???
