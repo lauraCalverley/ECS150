@@ -57,6 +57,7 @@ void readSector(int fd, char *sectorData, int sectorNumber);
 void storeBPB(int fd);
 void storeFAT(int fd);
 void storeRoot(int fd);
+int findCluster(int currentClusterNumber, int clustersToHop);
 
     
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
@@ -807,52 +808,101 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
-    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
     
-    void *sharedMemory;
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
-    
-    if(sharedMemory == NULL){
-        memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
-        Scheduler(6,CURRENT_THREAD);
-        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+    if (filedescriptor < 3) {
+        TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+        
+        void *sharedMemory;
+        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+        
+        if(sharedMemory == NULL){
+            memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
+            Scheduler(6,CURRENT_THREAD);
+            sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+        }
+        
+        int readLength;
+        int cumLength = 0;
+        char* readMemory = (char*)sharedMemory;
+        
+        
+        while (*length != 0) {
+            if(*length > 512) {
+                readLength = 512;
+            }
+            else {
+                readLength = *length;
+            }
+            MachineFileRead(filedescriptor, (char*)readMemory, readLength, callbackMachineFile, &savedCURRENTTHREAD);
+            Scheduler(6,CURRENT_THREAD);
+            
+            int resultLength = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+            
+            if (resultLength < 0) {
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_FAILURE;
+            }
+            memcpy((char*)data, (char*)readMemory, resultLength);
+            cumLength += resultLength;
+            *length -= readLength;
+            readMemory = (char*)readMemory + readLength;
+            data = (char*)data + readLength;
+        }
+        
+        *length = cumLength;
+        
+        VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
     }
-    
-    int readLength;
-    int cumLength = 0;
-    char* readMemory = (char*)sharedMemory;
+    else {
+        
+//    TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
+        int lengthToRead = *length; // allows us to update length with bytes actually read as we go
+        *length = 0;
+        
+        for (int i=0; i < openEntries.size(); i++) {
+            if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
+                // FIXME check other permission cases?
+                int sectorSize = theBPB->BPB_BytsPerSec;
+                int clusterSize = sectorSize * theBPB->BPB_SecPerClus;
+                
+                int offset = openEntries[i]->fileOffset;
+                int clustersToHop = offset / (theBPB->BPB_BytsPerSec * theBPB->BPB_SecPerClus);
 
-    
-    while (*length != 0) {
-        if(*length > 512) {
-            readLength = 512;
+                int currentClusterNumber = findCluster(openEntries[i]->firstClusterNumber, clustersToHop);
+                int currentClusterOffset = offset % (theBPB->BPB_BytsPerSec * theBPB->BPB_SecPerClus);
+                
+                int dataOffset = (clusterNumber - 2) * (theBPB->BPB_BytsPerSec * theBPB->BPB_SecPerClus) + clusterOffset;
+                
+//                 read logic
+//                 readSector(...)
+//                memcpy(data+lengthReadSoFar, , );
+            }
         }
-        else {
-            readLength = *length;
-        }
-        MachineFileRead(filedescriptor, (char*)readMemory, readLength, callbackMachineFile, &savedCURRENTTHREAD);
-        Scheduler(6,CURRENT_THREAD);
+
         
-        int resultLength = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
         
-        if (resultLength < 0) {
-            MachineResumeSignals(&sigState);
-            return VM_STATUS_FAILURE;
-        }
-        memcpy((char*)data, (char*)readMemory, resultLength);
-        cumLength += resultLength;
-        *length -= readLength;
-        readMemory = (char*)readMemory + readLength;
-        data = (char*)data + readLength;
+        
+        
+        
+        
     }
-    
-    *length = cumLength;
-    
-    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
+
     MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
 }
 
+int findCluster(int currentClusterNumber, int clustersToHop) {
+    
+    for (int i=0; i < clustersToHop; i++) {
+        if (currentClusterNumber == 0xFFF8) { // checks for out-of-bounds
+            return -1;
+        }
+        currentClusterNumber = FAT[currentClusterNumber];
+    }
+    return currentClusterNumber;
+}
+
+    
 TVMStatus VMFileClose(int filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
