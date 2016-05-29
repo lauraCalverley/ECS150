@@ -114,7 +114,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         storeBPB(FAT_IMAGE_FILE_DESCRIPTOR);
         storeFAT(FAT_IMAGE_FILE_DESCRIPTOR);
         storeRoot(FAT_IMAGE_FILE_DESCRIPTOR);
- 
+
 //        cout << "FirstRootSector" << theBPB->FirstRootSector << endl;
 //        cout << "RootDirectorySectors" << theBPB->RootDirectorySectors << endl;
 //        cout << "FirstDataSector" << theBPB->FirstDataSector << endl;
@@ -895,10 +895,11 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 int currentClusterNumber = startingClusterNumber;
                 
                 char tempData[*length+1022];
-//                tempData[*length+1022] = '\0';
+                //void* tempData;
+                tempData[*length+1022] = '\0';
                 for (int currentSector = startingSector, i = 0; currentSector < startingSector + sectorsToRead; currentSector++, i+= sectorSize) {
-                    cout << "i: " << i << endl;
-                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, tempData + i, currentSector);
+                    cout << "currentSector: " << currentSector << endl;
+                    readSector(FAT_IMAGE_FILE_DESCRIPTOR,(char*)tempData + i, currentSector);
                     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     cout << "tempData: " << tempData << endl;
                     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
