@@ -897,7 +897,9 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 char tempData[*length+1022] = "";
                 //void* tempData;
                 // tempData[*length+1022] = '\0';
-                for (int currentSector = startingSector, i = 0; currentSector < startingSector + sectorsToRead; currentSector++, i+= sectorSize) {
+                int i;
+                int currentSector;
+                for (currentSector = startingSector, i = 0; currentSector < (startingSector + sectorsToRead); currentSector++, i += sectorSize) {
                     cout << "currentSector: " << currentSector << endl;
                     readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
                     strcat(tempData, (char*)sectorData);
