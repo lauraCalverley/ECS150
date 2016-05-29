@@ -894,12 +894,13 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 int startingSector = theBPB->FirstDataSector + ((startingClusterNumber - 2) * 2) + (offset / sectorSize);
                 int currentClusterNumber = startingClusterNumber;
                 
-                char tempData[*length+1022];
+                char tempData[*length+1022] = "";
                 //void* tempData;
-                tempData[*length+1022] = '\0';
+                // tempData[*length+1022] = '\0';
                 for (int currentSector = startingSector, i = 0; currentSector < startingSector + sectorsToRead; currentSector++, i+= sectorSize) {
                     cout << "currentSector: " << currentSector << endl;
-                    readSector(FAT_IMAGE_FILE_DESCRIPTOR,(char*)tempData + i, currentSector);
+                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
+                    strcat(tempData, sectorData);
                     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     cout << "tempData: " << tempData << endl;
                     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
