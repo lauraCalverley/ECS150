@@ -32,7 +32,7 @@
 
 void VMMain(int argc, char *argv[]){
     int FileDescriptor, Length, Offset;
-    char Buffer[128];
+    char Buffer[800];
 
     VMPrint("VMMain opening VirtualMachine.h\n");    
     VMFileOpen("VIRTUA~1.H", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
@@ -43,7 +43,7 @@ void VMMain(int argc, char *argv[]){
     // VMFileWrite(FileDescriptor,"Hello world!\n",&Length);
     // VMPrint("VMMain VMFileWrite returned %d\n", Length);
     VMPrint("VMMain seeking file\n");
-    VMFileSeek(FileDescriptor, 6, 0, &Offset);    
+    VMFileSeek(FileDescriptor, 500, 0, &Offset);    
     VMPrint("VMMain VMFileSeek offset at %d\n",Offset);
     
     VMPrint("VMMain reading file\n");
