@@ -868,31 +868,15 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         
         for (int i=0; i < openEntries.size(); i++) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
-                // FIXME check other permission cases?
-
-                int sectorSize = theBPB->BPB_BytsPerSec; // # bytes
-//                int clusterSize = sectorSize * theBPB->BPB_SecPerClus; // # bytes
-                int offset = openEntries[i]->fileOffset; // # bytes
-                cout << "THE OFFSET IS: " << offset << endl;
-                int startingClusterNumber = openEntries[i]->firstClusterNumber; // first cluster from which to start reading
-                cout << "THE STARTING CLUSTER # IS: " << startingClusterNumber << endl;
+                // FIXME check other permission cases?              
                 
-                // determine # of sectors to read in
-                int sectorsToRead = 1;
-                for (int i=0; i < offset+lengthToRead; i += sectorSize) {
-                    if (offset < i) {
-                        sectorsToRead++;
-                    }
-                }
-
-                cout << "SECTORSTOREAD " << sectorsToRead << endl;
                 
                 void *sectorData;
                 VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorSize, &sectorData);
 
                 
                 // int currentSector = theBPB->FirstDataSector + ((startingClusterNumber - 2) * 2) + (offset / sectorSize);
-                int currentClusterNumber = startingClusterNumber;
+                
                 
                 // char tempData[*length+1022] = "";
                 // // void* tempData;
@@ -910,6 +894,20 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 //         currentClusterNumber = findCluster(currentClusterNumber, 1);
                 //     }
                 // }
+
+                int sectorSize = theBPB->BPB_BytsPerSec; // # bytes
+                int offset = openEntries[i]->fileOffset; // # bytes
+                int currentClusterNumber = openEntries[i]->firstClusterNumber;
+
+                // determine # of sectors to read in
+                int sectorsToRead = 1;
+                for (int i=0; i < offset+lengthToRead; i += sectorSize) {
+                    if (offset < i) {
+                        sectorsToRead++;
+                    }
+                }
+
+                cout << "SECTORSTOREAD " << sectorsToRead << endl;
 
                 int currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
                 char tempData[*length + 1022];
