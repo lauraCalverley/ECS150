@@ -44,10 +44,10 @@ vector<Entry*> openEntries;
 int FAT_IMAGE_FILE_DESCRIPTOR;
 int NEXT_FILE_DESCRIPTOR = 3;
 
-struct Sector{
-    int sectorNumber; //in entire FAT image; not data section
-    char* data;
-};
+//struct Sector{
+//    int sectorNumber; //in entire FAT image; not data section
+//    char* data;
+//};
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -732,7 +732,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                     //check if its already dirty
                     for(int k = 0; k < openEntries[i]->dirtySectors.size(); k++){
                         //if dirty sector is found write to it
-                        if(sectorsToWrite[j] == openEntries[i]->dirtySectors[k]){
+                        if(sectorsToWrite[j] == openEntries[i]->dirtySectors[k].sectorNumber){
 
                             //write to dirty sector at offset
                             int writeSize = lengthToWrite < (sectorSize - offset) ? lengthToWrite : (sectorSize - offset);
@@ -763,10 +763,10 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                         offset = 0;
 
                         //push to dirtySector
-                        Sector tempSector;
+                        Entry::Sector tempSector;
                         memcpy(tempSector.data, (char*)sectorData, sectorSize);
                         tempSector.sectorNumber = sectorsToWrite[j];
-                        openEntries[i]->dirtySectors[k].push_back(tempSector);
+                        openEntries[i]->dirtySectors.push_back(tempSector);
 
                         //adjust lengthToWrite
                         lengthToWrite -= writeSize;

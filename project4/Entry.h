@@ -2,10 +2,17 @@
 #define ENTRY_HEADER
 
 #include "VirtualMachine.h"
+#include <vector>
+using namespace std;
 
 class Entry {
     
 public:
+    struct Sector{
+        int sectorNumber;
+        char* data;
+    };
+
     SVMDirectoryEntry e;
     int firstClusterNumber;
     int descriptor;

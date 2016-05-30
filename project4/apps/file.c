@@ -38,10 +38,10 @@ void VMMain(int argc, char *argv[]){
     VMFileOpen("VIRTUA~1.H", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
     VMPrint("VMMain VMFileOpen returned %d\n", FileDescriptor);
     
-    // VMPrint("VMMain writing file\n");
-    // Length = 13;
-    // VMFileWrite(FileDescriptor,"Hello world!\n",&Length);
-    // VMPrint("VMMain VMFileWrite returned %d\n", Length);
+    VMPrint("VMMain writing file\n");
+    Length = 13;
+    VMFileWrite(FileDescriptor,"Hello world!\n",&Length);
+    VMPrint("VMMain VMFileWrite returned %d\n", Length);
     VMPrint("VMMain seeking file\n");
     VMFileSeek(FileDescriptor, 500, 0, &Offset);    
     VMPrint("VMMain VMFileSeek offset at %d\n",Offset);
