@@ -864,7 +864,6 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         
 //    TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         int lengthToRead = *length; // allows us to update length with bytes actually read as we go
-        *length = 0;
         
         for (int i=0; i < openEntries.size(); i++) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
@@ -899,6 +898,10 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 int offset = openEntries[i]->fileOffset; // # bytes
                 int currentClusterNumber = openEntries[i]->firstClusterNumber;
 
+                if((offset + lengthToRead) > openEntries[i]->e.DSize){
+                    lengthToRead = openEntries[i]->e.DSize - offset;
+                }
+
                 // determine # of sectors to read in
                 int sectorsToRead = 1;
                 for (int i=0; i < offset+lengthToRead; i += sectorSize) {
@@ -908,9 +911,9 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 }
 
                 cout << "SECTORSTOREAD " << sectorsToRead << endl;
-
+                cout << "lengthToRead: " << lengthToRead << endl;
                 int currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
-                char tempData[*length + 1022];
+                char tempData[lengthToRead + 1022];
                 tempData[0] = '\0';
                 //int sectorNumber;
                 //sectorsToRead = 3;
@@ -920,9 +923,10 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                     //cout << "last character of sectorData: " << sectorData + sectorSize << endl;
                     memcpy((char*)sectorData + sectorSize, "\0", 1);
                     strcat(tempData, (char*)sectorData);
+                    //cout << "tempData length: " << strlen(tempData) << endl;
                     //tempData[(i + 1) * sectorSize] = '\0';
                     //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                    cout << "tempData: " << tempData << endl;
+                    //cout << "tempData: " << tempData << endl;
                     //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     currentSector++;
                     if(((currentSector + 1) % theBPB->BPB_SecPerClus) == 0){
@@ -932,9 +936,9 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                     }
                 }
 
-                cout << "out of for loop" << endl;
+                //cout << "out of for loop" << endl;
                 //cout << "tempData length: " << strlen(tempData) << endl;
-                cout << "tempData: " << tempData << endl;
+                //cout << "tempData: " << tempData << endl;
 
                 //cout << "made it out of the for loop" << endl;
 
