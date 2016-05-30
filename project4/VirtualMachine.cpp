@@ -44,6 +44,11 @@ vector<Entry*> openEntries;
 int FAT_IMAGE_FILE_DESCRIPTOR;
 int NEXT_FILE_DESCRIPTOR = 3;
 
+struct Sector{
+    int sectorNumber; //in entire FAT image; not data section
+    char* data;
+};
+
 //function prototypes
 bool mutexExists(TVMMutexID id);
 TVMMainEntry VMLoadModule(const char *module);
@@ -622,49 +627,165 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
-    
-    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    
-    void *sharedMemory;
-    VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
-    
-    if(sharedMemory == NULL){
-        memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
-        Scheduler(6,CURRENT_THREAD);
-        sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+
+    if(filedescriptor < 3){
+
+        TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
+        
+        void *sharedMemory;
+        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sharedMemory);
+        
+        if(sharedMemory == NULL){
+            memoryPoolWaitQueue.push(*threadVector[CURRENT_THREAD]);
+            Scheduler(6,CURRENT_THREAD);
+            sharedMemory = threadVector[CURRENT_THREAD]->getSharedMemoryPointer();
+        }
+
+        memcpy((char*)sharedMemory, (const char *)data, *length);
+        int writeLength;
+        int cumLength = 0;
+        
+        char* writeMemory = (char*)sharedMemory;
+        while (*length != 0) {
+            if(*length > 512) {
+                writeLength = 512;
+            }
+            else {
+                writeLength = *length;
+            }
+            MachineFileWrite(filedescriptor, (char*)writeMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
+            Scheduler(6,CURRENT_THREAD);
+
+            if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
+                VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_FAILURE;
+            }
+            cumLength += threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+
+            *length -= writeLength;
+            writeMemory = (char*)sharedMemory + writeLength;
+        }
+
+        *length = cumLength;
+        
+        VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
     }
+    else{
+        int lengthToWrite = *length; // allows us to update length with bytes actually read as we go
+        
+        for (int i=0; i < openEntries.size(); i++) {
+            if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
+                // FIXME check other permission cases?    
 
-    memcpy((char*)sharedMemory, (const char *)data, *length);
-    int writeLength;
-    int cumLength = 0;
-    
-    char* writeMemory = (char*)sharedMemory;
-    while (*length != 0) {
-        if(*length > 512) {
-            writeLength = 512;
-        }
-        else {
-            writeLength = *length;
-        }
-        MachineFileWrite(filedescriptor, (char*)writeMemory, writeLength, callbackMachineFile, &savedCURRENTTHREAD);
-        Scheduler(6,CURRENT_THREAD);
+                //check for write permission
+                if(openEntries[i]->writeable == 0){
+                    *length = 0;
+                    MachineResumeSignals(&sigState);
+                    return VM_STATUS_FAILURE;
+                }          
+                
+                int sectorSize = theBPB->BPB_BytsPerSec;
+                void *sectorData;
+                VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorSize, &sectorData);
 
-        if (threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult() < 0) {
-            VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
-            MachineResumeSignals(&sigState);
-            return VM_STATUS_FAILURE;
-        }
-        cumLength += threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
+                int offset = openEntries[i]->fileOffset; // # bytes
+                int currentClusterNumber = openEntries[i]->firstClusterNumber; //starting cluster w/out offset
 
-        *length -= writeLength;
-        writeMemory = (char*)sharedMemory + writeLength;
+                if((offset + lengthToWrite) > openEntries[i]->e.DSize){
+                    lengthToWrite = openEntries[i]->e.DSize - offset;
+                }
+
+                // determine # of sectors to write to
+                int sectorCount = 1;
+                for (int i=0; i < offset+lengthToWrite; i += sectorSize) {
+                    if (offset < i) {
+                        sectorCount++;
+                    }
+                }
+
+
+                //create a vector of all sector numbers that need to be written to
+                //iterate through the entry's dirty sectors and write to those if they match a sector number that needs to be written to, then 
+                //    remove those sectors from sector number vector
+                //read in remaining sectors, write to them, then push to entry's dirtySector vector
+
+                //create a vector of all sector numbers that need to be written to
+                vector<int> sectorsToWrite;
+                int currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
+                for(int j = 0; j < sectorCount; j++){
+                    sectorsToWrite.push_back(currentSector);
+                    currentSector++;
+                    if(((currentSector + 1) % theBPB->BPB_SecPerClus) == 0){
+                        currentClusterNumber = findCluster(currentClusterNumber, 1);
+                        currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
+                    }
+                }
+
+                //write to sectors and push to dirtySectors
+                int dataPosition = 0;
+                for(int j = 0; j < sectorsToWrite.size(); j++){
+                    bool sectorIsDirty = 0;
+
+                    //check if its already dirty
+                    for(int k = 0; k < openEntries[i]->dirtySectors.size(); k++){
+                        //if dirty sector is found write to it
+                        if(sectorsToWrite[j] == openEntries[i]->dirtySectors[k]){
+
+                            //write to dirty sector at offset
+                            int writeSize = lengthToWrite < (sectorSize - offset) ? lengthToWrite : (sectorSize - offset);
+                            memcpy(openEntries[i]->dirtySectors[k].data + (offset % sectorSize), (char*)data + dataPosition, writeSize);
+                            offset = 0;
+
+                            //adjust lengthToWrite
+                            lengthToWrite -= writeSize;
+
+                            //adjust data position
+                            dataPosition += writeSize;
+
+                            *length = dataPosition;
+                            sectorIsDirty = 1;
+                            break;
+                        }
+                    }
+
+                    //if dirty sector was not found, read in sector, write to it, and push to dirty sector
+                    if(!sectorIsDirty){
+                        //read in data sector
+                        readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorsToWrite[j]);
+                        // memcpy((char*)sectorData + sectorSize, "\0", 1);
+                        
+                        //write to sector at offset
+                        int writeSize = lengthToWrite < (sectorSize - offset) ? lengthToWrite : (sectorSize - offset);
+                        memcpy((char*)sectorData + (offset % sectorSize), (char*)data + dataPosition, writeSize);
+                        offset = 0;
+
+                        //push to dirtySector
+                        Sector tempSector;
+                        memcpy(tempSector.data, (char*)sectorData, sectorSize);
+                        tempSector.sectorNumber = sectorsToWrite[j];
+                        openEntries[i]->dirtySectors[k].push_back(tempSector);
+
+                        //adjust lengthToWrite
+                        lengthToWrite -= writeSize;
+
+                        //adjust data position
+                        dataPosition += writeSize;
+
+                        *length = dataPosition;
+                    }
+                }
+                
+                VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_SUCCESS;
+            }
+        }
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_FAILURE;
     }
-
-    *length = cumLength;
-    
-    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
-    MachineResumeSignals(&sigState);
-    return VM_STATUS_SUCCESS;
 }
 
 //    VMFileOpen("test.txt", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
@@ -858,6 +979,8 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         *length = cumLength;
         
         VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sharedMemory);
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
     }
     else {
         cout << "IN THE ELSE" << endl;
@@ -872,27 +995,6 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 int sectorSize = theBPB->BPB_BytsPerSec;
                 void *sectorData;
                 VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorSize, &sectorData);
-
-                
-                // int currentSector = theBPB->FirstDataSector + ((startingClusterNumber - 2) * 2) + (offset / sectorSize);
-                
-                
-                // char tempData[*length+1022] = "";
-                // // void* tempData;
-                // tempData[*length+1022] = '\0';
-                // int i;
-                // int currentSector;
-                // for (currentSector = startingSector, i = 0; currentSector < (startingSector + sectorsToRead); currentSector++, i += sectorSize) {
-                //     cout << "currentSector: " << currentSector << endl;
-                //     readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
-                //     strcat(tempData, (char*)sectorData);
-                //     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                //     cout << "tempData: " << tempData << endl;
-                //     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                //     if (((currentSector + 1) % theBPB->BPB_SecPerClus) == 0) {
-                //         currentClusterNumber = findCluster(currentClusterNumber, 1);
-                //     }
-                // }
 
                 //int sectorSize = theBPB->BPB_BytsPerSec; // # bytes
                 int offset = openEntries[i]->fileOffset; // # bytes
@@ -953,147 +1055,13 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 
                 
                 VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_SUCCESS;
             }
         }
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_FAILURE;
     }
-            
-                
-                
-                
-                
-//                int firstSectorOffset = offset % sectorSize;
-//                int firstSectorRemainingBytes = sectorSize - firstSectorOffset;
-//
-//                
-//                
-//                int dataSectorNumber;
-//                memcpy(data, "\0", 1); // clear out data before concatenation
-//                char tempDataCopy[sectorSize+1];
-//                int bytesRead;
-//                
-//                // case: partial first cluster
-//                if (sectorsToRead < theBPB->BPB_SecPerClus) {
-//                    
-//                    cout << "Partial First Cluster" << endl;
-//                    
-//                    int startSector = (offset % clusterSize) / sectorSize; // starting sector in the given cluster
-//                    int endSector = startSector+sectorsToRead;
-//                    for (int i = startSector; i < endSector; i++) {
-////                        cout << "IN THE NEW FOR" << endl;
-//                        
-//                        dataSectorNumber = theBPB->FirstDataSector + ((currentClusterNumber - 2)*2) + i;
-//                        readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, dataSectorNumber);
-////                        cout << "HERE" << endl;
-//
-//                        bytesRead = (firstSectorRemainingBytes < lengthToRead) ? firstSectorRemainingBytes : lengthToRead;
-////                        cout << "PRE memcpy" << endl;
-//                        
-////                        cout << bytesRead << endl;
-//                        memcpy((char*)data, (char*)sectorData+firstSectorOffset, bytesRead);
-//                        data = (char*)data + bytesRead;
-////                        cout << "POST memcpy" << endl;
-////                        data = strcat((char*)data, tempDataCopy);
-//                        
-//                        
-//                        
-//
-//                        lengthToRead -= bytesRead;
-//                        *length += bytesRead;
-//                        sectorsToRead--;
-//                    }
-//                    currentClusterNumber = findCluster(currentClusterNumber, 1);
-//                }
-//                
-//                
-//                
-//                // update the IF below to work for sectors/cluster > 2
-//                if ((offset % clusterSize) > sectorSize) {
-//                    cout << "Partial First Cluster (with more clusters to follow)" << endl;
-//                    dataSectorNumber = theBPB->FirstDataSector + ((currentClusterNumber - 2)*2) + 1;
-//                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, dataSectorNumber);
-//
-//                    bytesRead = (firstSectorRemainingBytes < lengthToRead) ? firstSectorRemainingBytes : lengthToRead;
-////                    memcpy(tempDataCopy, (char*)sectorData+firstSectorOffset, bytesRead);
-//                    lengthToRead -= bytesRead;
-//                    *length += bytesRead;
-//
-////                    data = strcat((char*)data, tempDataCopy);
-//                    memcpy((char*)data, (char*)sectorData+firstSectorOffset, bytesRead);
-//                    data = (char*)data + bytesRead;
-//                    sectorsToRead--;
-//                    currentClusterNumber = findCluster(currentClusterNumber, 1);
-//
-//                }
-//                
-//                
-//                int wholeClustersToRead = sectorsToRead / theBPB->BPB_SecPerClus;
-//                
-//                // case read whole clusters
-//                for (int i=0; i < wholeClustersToRead; i++){
-//                    cout << "Whole Cluster For Loop" << endl;
-//                    for (int j=0; j < theBPB->BPB_SecPerClus; j++) {
-//                        dataSectorNumber = theBPB->FirstDataSector + ((currentClusterNumber - 2)*2) + j;
-//                        cout << "dataSectorNumber: " << dataSectorNumber << endl;
-//                        readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, dataSectorNumber);
-//
-//                        bytesRead = (firstSectorRemainingBytes < lengthToRead) ? firstSectorRemainingBytes : lengthToRead;
-////                        memcpy(tempDataCopy, (char*)sectorData, bytesRead);
-////                        cout << "tempDataCopy: " << tempDataCopy << endl;
-//                        lengthToRead -= bytesRead;
-//                        *length += bytesRead;
-////                        tempDataCopy[strlen(tempDataCopy)] = '\0';
-//                        tempDataCopy[bytesRead] = '\0';
-//                        
-////                        data = strcat((char*)data, tempDataCopy);
-//                        memcpy((char*)data, (char*)sectorData+firstSectorOffset, bytesRead);
-//                        data = (char*)data + bytesRead;
-//
-//                        sectorsToRead--;
-//                    }
-//                    currentClusterNumber = findCluster(currentClusterNumber, 1);
-//                    cout << "next cluster is: " << currentClusterNumber << endl;
-//                }
-//                
-//                cout << "SECTORSTOREAD " << sectorsToRead << endl;
-//                
-//                //partial last cluster
-////                for (int i=0; i < sectorsToRead; i++) {
-////                    cout << "Partial Last Cluster, sector " << i << endl;
-////                    dataSectorNumber = theBPB->FirstDataSector + ((currentClusterNumber - 2)*2) + i;
-////                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, dataSectorNumber);
-////
-////                    bytesRead = (firstSectorRemainingBytes < lengthToRead) ? firstSectorRemainingBytes : lengthToRead;
-////                    //memcpy(tempDataCopy, (char*)sectorData, bytesRead);
-////                    lengthToRead -= bytesRead;
-////                    *length += bytesRead;
-////                    tempDataCopy[bytesRead] = '\0';
-////
-////                    //data = strcat((char*)data, tempDataCopy);
-////                memcpy((char*)data, (char*)sectorData+firstSectorOffset, bytesRead);
-////                data = (char*)data + bytesRead;
-////                    sectorsToRead--;
-////                }
-//                
-////                memcpy(NittaData, data, strlen((char*)data));
-////                cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-//////                cout << "NittaData: " << (char*)NittaData << endl;
-////                printf("%s", (char*)NittaData);
-////                cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                
-                
-                
-//            }
-//        }
-//    }
-//    
-//    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-//    
-//    cout << "data: " << (char*)data << endl;
-//    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-
-
-    MachineResumeSignals(&sigState);
-    return VM_STATUS_SUCCESS;
 }
 
 int findCluster(int currentClusterNumber, int clustersToHop) {

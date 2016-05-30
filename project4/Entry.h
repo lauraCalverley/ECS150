@@ -12,6 +12,7 @@ public:
     bool directory;
     bool writeable;
     int fileOffset;
+    vector<Sector> dirtySectors;
     
     Entry(SVMDirectoryEntry e, int firstClusterNumber, int descriptor = -1);
 };
