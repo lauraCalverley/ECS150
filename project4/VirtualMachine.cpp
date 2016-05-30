@@ -870,7 +870,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
                 // FIXME check other permission cases?              
                 
-                
+                int sectorSize = theBPB->BPB_BytsPerSec;
                 void *sectorData;
                 VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorSize, &sectorData);
 
@@ -895,7 +895,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 //     }
                 // }
 
-                int sectorSize = theBPB->BPB_BytsPerSec; // # bytes
+                //int sectorSize = theBPB->BPB_BytsPerSec; // # bytes
                 int offset = openEntries[i]->fileOffset; // # bytes
                 int currentClusterNumber = openEntries[i]->firstClusterNumber;
 
@@ -913,10 +913,12 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 char tempData[*length + 1022];
                 tempData[0] = '\0';
                 //int sectorNumber;
-                sectorsToRead = 3;
+                //sectorsToRead = 3;
                 for(int i= 0; i < sectorsToRead; i++){
-                    cout << "i: " << i << " sectorsToRead: " << sectorsToRead << endl;
+                    //cout << "i: " << i << " sectorsToRead: " << sectorsToRead << endl;
                     readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
+                    //cout << "last character of sectorData: " << sectorData + sectorSize << endl;
+                    memcpy((char*)sectorData + sectorSize, "\0", 1);
                     strcat(tempData, (char*)sectorData);
                     //tempData[(i + 1) * sectorSize] = '\0';
                     //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
@@ -931,18 +933,18 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 }
 
                 cout << "out of for loop" << endl;
-
+                //cout << "tempData length: " << strlen(tempData) << endl;
                 cout << "tempData: " << tempData << endl;
 
-                cout << "made it out of the for loop" << endl;
+                //cout << "made it out of the for loop" << endl;
 
                 // trim edges
                 memcpy((char*)data, tempData + (offset % sectorSize), lengthToRead);
                 *length = lengthToRead;
                 
-                cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                cout << "data: " << (char*)data << endl;
-                cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                //cout << "data: " << (char*)data << endl;
+                //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
 
                 
                 
