@@ -44,10 +44,6 @@ vector<Entry*> openEntries;
 int FAT_IMAGE_FILE_DESCRIPTOR;
 int NEXT_FILE_DESCRIPTOR = 3;
 
-//struct Sector{
-//    int sectorNumber; //in entire FAT image; not data section
-//    char* data;
-//};
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -678,7 +674,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         
         for (int i=0; i < openEntries.size(); i++) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
-                // FIXME check other permission cases?    
+                // FIXME check other permission cases?
 
                 //check for write permission
                 if(openEntries[i]->writeable == 0){
@@ -705,8 +701,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                         sectorCount++;
                     }
                 }
-
-
+                
                 //create a vector of all sector numbers that need to be written to
                 //iterate through the entry's dirty sectors and write to those if they match a sector number that needs to be written to, then 
                 //    remove those sectors from sector number vector
@@ -726,8 +721,9 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
 
                 //write to sectors and push to dirtySectors
                 int dataPosition = 0;
+                bool sectorIsDirty;
                 for(int j = 0; j < sectorsToWrite.size(); j++){
-                    bool sectorIsDirty = 0;
+                    sectorIsDirty = 0;
 
                     //check if its already dirty
                     for(int k = 0; k < openEntries[i]->dirtySectors.size(); k++){
@@ -752,7 +748,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                     }
 
                     //if dirty sector was not found, read in sector, write to it, and push to dirty sector
-                    if(!sectorIsDirty){
+                    if(sectorIsDirty == 0){
                         //read in data sector
                         readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorsToWrite[j]);
                         // memcpy((char*)sectorData + sectorSize, "\0", 1);
@@ -764,9 +760,15 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
 
                         //push to dirtySector
                         Entry::Sector tempSector;
+//                        char tempDataPtr[sectorSize];
                         memcpy(tempSector.data, (char*)sectorData, sectorSize);
+//                        tempSector.data = tempDataPtr;
+//                        memcpy(tempSector.data, tempDataPtr, sectorSize);
+                        
                         tempSector.sectorNumber = sectorsToWrite[j];
                         openEntries[i]->dirtySectors.push_back(tempSector);
+                        cout << "i is " << i << endl;
+                        cout << "***openEntries[i]->dirtySectors[0].data*** " << openEntries[i]->dirtySectors[0].data << endl;
 
                         //adjust lengthToWrite
                         lengthToWrite -= writeSize;
@@ -777,8 +779,9 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                         *length = dataPosition;
                     }
                 }
-                
+                openEntries[i]->fileOffset += dataPosition;
                 VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+
                 MachineResumeSignals(&sigState);
                 return VM_STATUS_SUCCESS;
             }
@@ -821,7 +824,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
             // flags used by given apps: o_rdonly, o_creat | o_trunc | o_rdwr
             //    o_creat: if file needs to be created it is created using the mode bits passed in
             //    o_trunc: file is truncated to length 0
-            if((flags & O_RDWR) == 1){
+            if((flags & O_RDWR) == O_RDWR){
                 ROOT[i]->writeable = 1;
             }
             else{
@@ -1019,12 +1022,38 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 tempData[0] = '\0';
                 //int sectorNumber;
                 //sectorsToRead = 3;
-                for(int i= 0; i < sectorsToRead; i++){
+                cout << "dirty count: " << openEntries[i]->dirtySectors.size() << endl;
+                for(int j= 0; j < sectorsToRead; j++){
+                    cout << "FOR LOOP ROUND #" << j << endl;
+                    bool sectorIsDirty = 0;
+                    //check if its already dirty
+                    for(int k = 0; k < openEntries[i]->dirtySectors.size(); k++){
+                        //if dirty sector is found write to it
+                        if(currentSector == openEntries[i]->dirtySectors[k].sectorNumber){ // currentSector is dirty
+                            cout << "HERE WE ARE" << endl;
+                            memcpy((char*)sectorData, openEntries[i]->dirtySectors[k].data, sectorSize);
+                            sectorIsDirty = 1;
+                            break;
+                        }
+                    }
+
+                    if (!sectorIsDirty) {
+                        cout << "BEFORE on " << j << endl;
+                        readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
+                        cout << "AFTER on " << j << endl;
+                    }
+//                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
+                    cout << "GOT TO HERE" << endl;
                     //cout << "i: " << i << " sectorsToRead: " << sectorsToRead << endl;
-                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
                     //cout << "last character of sectorData: " << sectorData + sectorSize << endl;
-                    memcpy((char*)sectorData + sectorSize, "\0", 1);
+                    char *dummy = "\0";
+                    memcpy((char*)sectorData + sectorSize, dummy, 1);
+                    
+                    cout << "length: " << strlen((char*)sectorData) << endl;
+                    
                     strcat(tempData, (char*)sectorData);
+                    
+                    cout << "also here" << endl;
                     //cout << "tempData length: " << strlen(tempData) << endl;
                     //tempData[(i + 1) * sectorSize] = '\0';
                     //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
@@ -1047,6 +1076,7 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 // trim edges
                 memcpy((char*)data, tempData + (offset % sectorSize), lengthToRead);
                 *length = lengthToRead;
+                openEntries[i]->fileOffset += lengthToRead;
                 
                 //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                 //cout << "data: " << (char*)data << endl;
@@ -1566,7 +1596,6 @@ void Scheduler(int transition, TVMThreadID thread) {
 
 // NOTES
 /*
- You don't really care about the particular number returned for the FAT image, it isn't going to be visible to the app. Assigning it to some global "FAT_IMAGE_FILE_DESCRIPTOR" would probably be fine.
- 
+Read of length > clusterSize repeat the first cluster's final sector's data...???
  */
 

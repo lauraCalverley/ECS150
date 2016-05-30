@@ -10,7 +10,8 @@ class Entry {
 public:
     struct Sector{
         int sectorNumber;
-        char* data;
+//        char *data;
+        char data[512]; // FIXME FIXME FIXME
     };
 
     SVMDirectoryEntry e;
