@@ -891,25 +891,42 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorSize, &sectorData);
 
                 
-                int startingSector = theBPB->FirstDataSector + ((startingClusterNumber - 2) * 2) + (offset / sectorSize);
+                // int currentSector = theBPB->FirstDataSector + ((startingClusterNumber - 2) * 2) + (offset / sectorSize);
                 int currentClusterNumber = startingClusterNumber;
                 
-                char tempData[*length+1022] = "";
-                //void* tempData;
+                // char tempData[*length+1022] = "";
+                // // void* tempData;
                 // tempData[*length+1022] = '\0';
-                int i;
-                int currentSector;
-                for (currentSector = startingSector, i = 0; currentSector < (startingSector + sectorsToRead); currentSector++, i += sectorSize) {
-                    cout << "currentSector: " << currentSector << endl;
+                // int i;
+                // int currentSector;
+                // for (currentSector = startingSector, i = 0; currentSector < (startingSector + sectorsToRead); currentSector++, i += sectorSize) {
+                //     cout << "currentSector: " << currentSector << endl;
+                //     readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
+                //     strcat(tempData, (char*)sectorData);
+                //     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                //     cout << "tempData: " << tempData << endl;
+                //     cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                //     if (((currentSector + 1) % theBPB->BPB_SecPerClus) == 0) {
+                //         currentClusterNumber = findCluster(currentClusterNumber, 1);
+                //     }
+                // }
+
+                currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
+                char tempData[*length + 1022] = "";
+                int sectorNumber;
+                for(sectorNumber = 0; sectorNumber < sectorsToRead; sectorNumber++){
                     readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
                     strcat(tempData, (char*)sectorData);
-                    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     cout << "tempData: " << tempData << endl;
-                    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                    if (((currentSector + 1) % theBPB->BPB_SecPerClus) == 0) {
+                    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                    currentSector++;
+                    if((currentSector % theBPB->BPB_SecPerClus) == 0){
                         currentClusterNumber = findCluster(currentClusterNumber, 1);
+                        currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
                     }
                 }
+
 
                 // trim edges
                 memcpy((char*)data, tempData + (offset % sectorSize), lengthToRead);
