@@ -911,22 +911,32 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 //     }
                 // }
 
-                currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
-                char tempData[*length + 1022] = "";
-                int sectorNumber;
-                for(sectorNumber = 0; sectorNumber < sectorsToRead; sectorNumber++){
+                int currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
+                char tempData[*length + 1022];
+                tempData[0] = '\0';
+                //int sectorNumber;
+                sectorsToRead = 3;
+                for(int i= 0; i < sectorsToRead; i++){
+                    cout << "i: " << i << " sectorsToRead: " << sectorsToRead << endl;
                     readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
                     strcat(tempData, (char*)sectorData);
-                    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                    //tempData[(i + 1) * sectorSize] = '\0';
+                    //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     cout << "tempData: " << tempData << endl;
-                    cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
+                    //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     currentSector++;
-                    if((currentSector % theBPB->BPB_SecPerClus) == 0){
+                    if(((currentSector + 1) % theBPB->BPB_SecPerClus) == 0){
+                        //cout << "searching for next cluster" << endl;
                         currentClusterNumber = findCluster(currentClusterNumber, 1);
                         currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
                     }
                 }
 
+                cout << "out of for loop" << endl;
+
+                cout << "tempData: " << tempData << endl;
+
+                cout << "made it out of the for loop" << endl;
 
                 // trim edges
                 memcpy((char*)data, tempData + (offset % sectorSize), lengthToRead);
