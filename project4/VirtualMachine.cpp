@@ -1098,7 +1098,28 @@ TVMStatus VMDirectoryClose(int dirdescriptor) {
     
     
     
-TVMStatus VMDirectoryRewind(int dirdescriptor) {}
+TVMStatus VMDirectoryRewind(int dirdescriptor) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    for (int i=0; i < openEntries.size(); i++) {
+        if ((openEntries[i]->descriptor) == dirdescriptor) { //found matching directory
+            if (strcmp((openEntries[i]->e.DShortFileName),"ROOT") == 0) { //find matching entry
+                ROOT[i]->fileOffset = 1;
+            }
+            else {
+                ROOT[i]->fileOffset = 0;
+            }
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+    }    
+    
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_FAILURE;
+}
+    
+    
 TVMStatus VMDirectoryChange(const char *path) {}
 
     
