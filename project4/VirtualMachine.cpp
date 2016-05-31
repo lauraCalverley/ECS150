@@ -45,6 +45,7 @@ int FAT_IMAGE_FILE_DESCRIPTOR;
 int NEXT_FILE_DESCRIPTOR = 3;
 
 char CURRENT_PATH[VM_FILE_SYSTEM_MAX_PATH] = "/";
+int CURRENT_PATH_SECTOR;
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
@@ -133,6 +134,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         storeFAT(FAT_IMAGE_FILE_DESCRIPTOR);
         storeRoot(FAT_IMAGE_FILE_DESCRIPTOR);
 
+        CURRENT_PATH_SECTOR = theBPB->FirstRootSector;
 
         int Mil, Kil, One;
         for(int i = 1; i < ROOT.size(); i++){
@@ -238,6 +240,7 @@ void storeBPB(int fd) {
     void *sectorData;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
     readSector(fd, (char*)sectorData, 0);
+    cout << "BPB SECTOR: " << (char*)sectorData << endl;
 
     uint16_t BPB_BytsPerSec = *(uint16_t *)((char*)sectorData + 11); // CITE Nitta
     uint8_t BPB_SecPerClus = *(uint8_t *)((char*)sectorData + 13); // CITE Nitta FIXME - remove (int) cast?
@@ -976,8 +979,10 @@ TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
         return VM_STATUS_SUCCESS;
     }
     
+    char *name;
+    VMFileSystemFileFromFullPath(name, dirname);
     for (int i=0; i < ROOT.size(); i++) {
-        if (strcmp((ROOT[i]->e.DShortFileName),dirname) == 0) { //find matching dir -- ROOT[i]
+        if (strcmp((ROOT[i]->e.DShortFileName),name) == 0) { //find matching dir -- ROOT[i]
             
             currentCluster = ROOT[i]->firstClusterNumber;
             // check for corruption - start with (ROOT[i]->firstClusterNumber and follow the FAT cells till 0xFFFF; corrupted = 0xFFF7
@@ -1071,10 +1076,144 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                 MachineResumeSignals(&sigState);
                 return VM_STATUS_SUCCESS;                
             }
-
+            else {
+                
+//                cout << "WE ARE HERE" << endl;
+                
+                void *sectorData;
+                VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, theBPB->BPB_BytsPerSec, &sectorData);
+                
+                
+                SVMDirectoryEntry entry; // NOT a pointer, so: *dirent = entry;
+                readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, CURRENT_PATH_SECTOR);
+                
+//                cout << "SECTOR DATA: " << (char*)sectorData << endl;
+                
+                while (ROOT[i]->fileOffset < (theBPB->BPB_BytsPerSec / 32)) {
+//                    cout << "offset: " << ROOT[i]->fileOffset << endl;
+                    memcpy(&entry.DAttributes, (char *)sectorData + ((ROOT[i]->fileOffset) * 32) + 11, 1);
+                
+                    if ((entry.DAttributes & 0x0F) == 0x0F) { // LFN
+                        ROOT[i]->fileOffset++;
+                    }
+                    else { // SFN
+//                        cout << "found a short file entry" << endl;
+                        char *namePtr;
+                        char *extPtr;
+                        
+                        char fileName[9] = "";
+                        char *dummy1;
+                        char *dummy2;
+                        memcpy(fileName, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) , 8);
+                        fileName[8] = '\0';
+//                        cout << "filename is: " << (char*)fileName << endl;
+                        namePtr = strtok_r(fileName, " ", &dummy1);
+//                        cout << "namePtr: " << namePtr << endl;
+                        if(namePtr != '\0'){ // valid SHORT entry
+//                            cout << "namePtr: " << namePtr << endl;
+                            char fileExt[4] = "";
+                            memcpy(fileExt, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +8, 3);
+                            fileExt[3] = '\0';
+                            if (fileExt[0] != ' ') {
+                                extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
+                                if(extPtr != '\0'){
+                                    strcat(namePtr, ".");
+                                    strcat(namePtr, extPtr);
+                                }
+                            }
+//                            cout << "srlen(namePtr): " << strlen(namePtr) << endl;
+                            memcpy(entry.DShortFileName, namePtr, strlen(namePtr)+1);
+                            memcpy(entry.DLongFileName, namePtr, strlen(namePtr)+1);
+                            
+                            memcpy(&(entry.DSize), (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +28, 4);
+                            
+                            SVMDateTime create;
+                            SVMDateTime access;
+                            SVMDateTime modify;
+                            
+                            uint16_t createDate;
+                            memcpy(&createDate, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +16, 2);
+                            
+                            // 0-4 day of month: range 1-31
+                            // 5-8 month of year: range 1-12
+                            // 9-15 number of years since 1980: range 0-127
+                            create.DDay = createDate & 0x001F; // or 0x001F
+                            create.DMonth = (createDate & 0x01E0) >> 5;
+                            create.DYear = ((createDate & 0xFE00) >> 9)+ 1980;
+                            uint16_t time;
+                            memcpy(&time, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +14, 2);
+                            create.DSecond = (time & 0x1F) * 2;
+                            create.DMinute = (time & 0x7E0) >> 5;
+                            create.DHour = (time & 0xF800) >> 11;
+                            
+                            memcpy(&create.DHundredth, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +13, 1); // add 1 second if necessary then % 100
+                            
+                            create.DSecond += (create.DHundredth / 100);
+                            create.DHundredth = create.DHundredth % 100;
+                            //                    cout << "CREATE" << endl;
+                            //                   VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",create.DYear, create.DMonth, create.DDay, (create.DHour % 12) ? (create.DHour % 12) : 12 , create.DMinute, create.DSecond, create.DHundredth, create.DHour >= 12 ? "PM" : "AM");
+                            
+                            
+                            uint16_t accessDate;
+                            memcpy(&accessDate, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +18, 2);
+                            
+                            // 0-4 day of month: range 1-31
+                            // 5-8 month of year: range 1-12
+                            // 9-15 number of years since 1980: range 0-127
+                            access.DDay = accessDate & 0x001F; // or 0x001F
+                            access.DMonth = (accessDate & 0x01E0) >> 5;
+                            access.DYear = ((accessDate & 0xFE00) >> 9)+ 1980;
+                            
+                            access.DSecond = 0;
+                            access.DMinute = 0;
+                            access.DHour = 0;
+                            access.DHundredth = 0;
+                            //                    cout << "ACCESS" << endl;
+                            //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
+                            
+                            uint16_t modifyDate;
+                            memcpy(&modifyDate, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +24, 2);
+                            
+                            // 0-4 day of month: range 1-31
+                            // 5-8 month of year: range 1-12
+                            // 9-15 number of years since 1980: range 0-127
+                            modify.DDay = modifyDate & 0x001F; // or 0x001F
+                            modify.DMonth = (modifyDate & 0x01E0) >> 5;
+                            modify.DYear = ((modifyDate & 0xFE00) >> 9)+ 1980;
+                            uint16_t modifyTime;
+                            memcpy(&modifyTime, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +22, 2);
+                            modify.DSecond = (modifyTime & 0x1F) * 2;
+                            modify.DMinute = (modifyTime & 0x7E0) >> 5;
+                            modify.DHour = (modifyTime & 0xF800) >> 11;
+                            
+                            modify.DHundredth = 0;
+                            //                    cout << "MODIFY" << endl;
+                            //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",modify.DYear, modify.DMonth, modify.DDay, (modify.DHour % 12) ? (modify.DHour % 12) : 12 , modify.DMinute, modify.DSecond, modify.DHundredth, modify.DHour >= 12 ? "PM" : "AM");
+                            //                    cout << endl;
+                            
+                            entry.DCreate = create;
+                            entry.DAccess = access;
+                            entry.DModify = modify;
+                            
+                            uint16_t firstClusterStart;
+                            memcpy(&firstClusterStart, (char *)sectorData+ ((ROOT[i]->fileOffset) * 32) +26, 2);
+                            
+                            *dirent = entry;
+                            ROOT[i]->fileOffset++;
+                            VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+                            MachineResumeSignals(&sigState);
+                            return VM_STATUS_SUCCESS;
+                        }
+                        else {
+                            ROOT[i]->fileOffset++;
+                        }
+                    }
+                } // while
+                VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+            } //else
             break;
-        }
-    }
+        } // if
+    } // for
 //    cout << "didn't find matching descriptor" << endl;
     MachineResumeSignals(&sigState);
     return VM_STATUS_ERROR_INVALID_PARAMETER;
@@ -1136,6 +1275,7 @@ TVMStatus VMDirectoryChange(const char *path) {
         for(int i = 1; i < ROOT.size(); i++){
             if(!strcmp(token, ROOT[i]->e.DShortFileName)){
                 strcat(CURRENT_PATH, token);
+                CURRENT_PATH_SECTOR = theBPB->FirstDataSector + ((ROOT[i]->firstClusterNumber - 2) * 2);
                 token = strtok_r(NULL, "/", &saveptr);
                 if(token == NULL){
                     MachineResumeSignals(&sigState);
