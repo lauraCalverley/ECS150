@@ -900,7 +900,8 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         // newDirEntry.DShortFileName = *filename;
         
         // use SFN algorithm to generate DShortFileName for newDirEntry from filename
-        memcpy(newDirEntry.DShortFileName, filename, strlen(filename));
+        memcpy(newDirEntry.DShortFileName, filename, strlen(filename) + 1);
+        memcpy(newDirEntry.DLongFileName, filename, strlen(filename) + 1);
             
         newDirEntry.DSize = 0;
         newDirEntry.DAttributes = 0x00;
