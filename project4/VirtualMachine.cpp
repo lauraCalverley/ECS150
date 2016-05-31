@@ -664,8 +664,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         return VM_STATUS_SUCCESS;
     }
     else{
-        int lengthToWrite = *length; // allows us to update length with bytes actually read as we go
-        
+        int lengthToWrite = *length; // allows us to update length with bytes actually read as we go 
         for (int i=0; i < openEntries.size(); i++) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
                 // FIXME check other permission cases?
@@ -684,9 +683,9 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                 int offset = openEntries[i]->fileOffset; // # bytes
                 int currentClusterNumber = openEntries[i]->firstClusterNumber; //starting cluster w/out offset
 
-                if((offset + lengthToWrite) > openEntries[i]->e.DSize){
-                    lengthToWrite = openEntries[i]->e.DSize - offset;
-                }
+                //if((offset + lengthToWrite) > openEntries[i]->e.DSize){
+                //    lengthToWrite = openEntries[i]->e.DSize - offset;
+                //}
 
                 // determine # of sectors to write to
                 int sectorCount = 1;
@@ -723,7 +722,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                     for(int k = 0; k < openEntries[i]->dirtySectors.size(); k++){
                         //if dirty sector is found write to it
                         if(sectorsToWrite[j] == openEntries[i]->dirtySectors[k].sectorNumber){
-
                             //write to dirty sector at offset
                             int writeSize = lengthToWrite < (sectorSize - offset) ? lengthToWrite : (sectorSize - offset);
                             memcpy(openEntries[i]->dirtySectors[k].data + (offset % sectorSize), (char*)data + dataPosition, writeSize);
@@ -748,7 +746,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                         // memcpy((char*)sectorData + sectorSize, "\0", 1);
                         
                         //write to sector at offset
-                        int writeSize = lengthToWrite < (sectorSize - offset) ? lengthToWrite : (sectorSize - offset);
+                        int writeSize = (lengthToWrite < (sectorSize - offset)) ? lengthToWrite : (sectorSize - offset);
                         memcpy((char*)sectorData + (offset % sectorSize), (char*)data + dataPosition, writeSize);
                         offset = 0;
 
@@ -849,22 +847,19 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         
         // use SFN algorithm to generate DShortFileName for newDirEntry from filename
         memcpy(newDirEntry.DShortFileName, filename, strlen(filename));
-        
-        
-        
-        
+            
         newDirEntry.DSize = 0;
         newDirEntry.DAttributes = 0x00;
-        SVMDateTimeRef date;
-        if(VM_STATUS_SUCCESS != VMDateTime(date)){
+        SVMDateTime date;
+        if(VM_STATUS_SUCCESS != VMDateTime(&date)){
             MachineResumeSignals(&sigState);
             return VM_STATUS_FAILURE;
         }
-
-        newDirEntry.DCreate = *date;
-        newDirEntry.DAccess = *date;
-        newDirEntry.DModify = *date;    
-
+         
+        newDirEntry.DCreate = date;
+        newDirEntry.DAccess = date;
+        newDirEntry.DModify = date;    
+        
         //find first free cluster number and replace fat with fff8
         int clusterNum = 0;
         for(int i = 0; i < FAT.size(); i++){
@@ -874,8 +869,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                 break;
             }
         }
-
-        
+                
         Entry* newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
         if((flags & O_RDWR) == O_RDWR){
             newEntry->writeable = 1;
