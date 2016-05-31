@@ -44,7 +44,7 @@ vector<Entry*> openEntries;
 int FAT_IMAGE_FILE_DESCRIPTOR;
 int NEXT_FILE_DESCRIPTOR = 3;
 
-char *CURRENT_PATH = "/";
+char CURRENT_PATH[VM_FILE_SYSTEM_MAX_PATH] = "/";
 
 //function prototypes
 bool mutexExists(TVMMutexID id);
