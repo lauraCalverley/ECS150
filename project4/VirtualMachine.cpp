@@ -1121,7 +1121,37 @@ TVMStatus VMDirectoryRewind(int dirdescriptor) {
 }
     
     
-TVMStatus VMDirectoryChange(const char *path) {}
+TVMStatus VMDirectoryChange(const char *path) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if(path == NULL){
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;       
+    }    
+    char* saveptr;
+    char* token = strtok_r(path, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+    //TODO handle case where path begins with '/'
+    if(!strcmp(CURRENT_PATH, "/")){ //in root directory
+        for(int i = 1; i < ROOT.size(); i++){
+            if(!strcmp(token, ROOT[[i]->e.DShortFileName)){
+                strcat(CURRENT_PATH, token);
+                token = strtok_r(NULL, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+                if(token == NULL){
+                    MachineResumeSignals(&sigState);
+                    return VM_STATUS_SUCCESS;
+                }
+            }
+        }
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_FAILURE;
+    }
+    else{ //not in root
+
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_FAILURE;
+    }
+}
 
     
     
