@@ -133,6 +133,35 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         storeFAT(FAT_IMAGE_FILE_DESCRIPTOR);
         storeRoot(FAT_IMAGE_FILE_DESCRIPTOR);
 
+
+        int Mil, Kil, One;
+        for(int i = 1; i < ROOT.size(); i++){
+
+VMPrint("%04d/%02d/%02d %02d:%02d %s ",ROOT[i]->e.DModify.DYear, ROOT[i]->e.DModify.DMonth, ROOT[i]->e.DModify.DDay, (ROOT[i]->e.DModify.DHour % 12) ? (ROOT[i]->e.DModify.DHour % 12) : 12 , ROOT[i]->e.DModify.DMinute, ROOT[i]->e.DModify.DHour >= 12 ? "PM" : "AM");
+                   VMPrint("%s ", ROOT[i]->e.DAttributes & VM_FILE_SYSTEM_ATTR_DIRECTORY ? "<DIR> " : "<FILE>");
+                   Mil = ROOT[i]->e.DSize / 1000000;
+                   Kil = (ROOT[i]->e.DSize / 1000) % 1000;
+                   One = ROOT[i]->e.DSize % 1000;
+                   if(Mil){
+                       VMPrint("%3d,%03d,%03d ",Mil, Kil, One);   
+                   }
+                   else if(Kil){
+                       VMPrint("    %3d,%03d ", Kil, One);
+                   }
+                   else if(0 == (ROOT[i]->e.DAttributes & VM_FILE_SYSTEM_ATTR_DIRECTORY)){
+                       VMPrint("        %3d ",One);
+                   }
+                  else{
+                       VMPrint("            ");   
+                   }
+                   VMPrint("%-13s %s\n",ROOT[i]->e.DShortFileName, ROOT[i]->e.DLongFileName);
+
+}
+
+
+
+
+
 //        cout << "FirstRootSector" << theBPB->FirstRootSector << endl;
 //        cout << "RootDirectorySectors" << theBPB->RootDirectorySectors << endl;
 //        cout << "FirstDataSector" << theBPB->FirstDataSector << endl;
@@ -375,7 +404,8 @@ void storeRoot(int fd){
                     memcpy(&firstClusterStart, (char *)sectorData+j+26, 2);
                     
                     theEntry = new Entry(*entry, firstClusterStart); // FIXME perhaps change entry to be a non-ref
-                    
+
+ 
 //                    cout << "theSIZE: " << theEntry->e.DSize << " FIRST CLUSTER: " << theEntry->firstClusterNumber << " The NAME: " << theEntry->e.DShortFileName << endl;;
                     ROOT.push_back(theEntry);
                     
@@ -932,6 +962,7 @@ TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
     if(!strcmp(dirname, "/")){
         ROOT[0]->descriptor = NEXT_FILE_DESCRIPTOR++;
         openEntries.push_back(ROOT[0]);
+        *dirdescriptor = openEntries[openEntries.size() - 1]->descriptor;
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
@@ -1013,9 +1044,12 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
+    cout << "dirdescriptor: " << dirdescriptor << endl;
+    cout << "ROOT[0]->descriptor: " << ROOT[0]->descriptor << endl;
 
     for (int i=0; i < openEntries.size(); i++) {
         if ((openEntries[i]->descriptor) == dirdescriptor) { //find matching directory -- ROOT[i]
+            cout << "found matching descriptor" << endl;
             //root directory
             if(i == 0){
                 if(ROOT[0]->fileOffset >= ROOT.size()){
@@ -1031,6 +1065,7 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
             break;
         }
     }
+    cout << "didn't find matching descriptor" << endl;
     MachineResumeSignals(&sigState);
     return VM_STATUS_ERROR_INVALID_PARAMETER;
 }
