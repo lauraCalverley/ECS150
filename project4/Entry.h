@@ -23,6 +23,8 @@ public:
     vector<Sector> dirtySectors;
     
     Entry(SVMDirectoryEntry e, int firstClusterNumber, int descriptor = -1);
+
+    SVMDirectoryEntryRef getSVMEntryRef();
 };
 
 #endif

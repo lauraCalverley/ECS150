@@ -10,3 +10,7 @@ Entry::Entry(SVMDirectoryEntry e, int firstClusterNumber, int descriptor) :
     writeable = 0;
     fileOffset = 0;
 }
+
+SVMDirectoryEntryRef Entry::getSVMEntryRef(){
+	return &e;
+}

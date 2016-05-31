@@ -126,6 +126,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         newDirEntry.DModify = date;   
         Entry* newEntry = new Entry(newDirEntry, 0);
         ROOT.push_back(newEntry);
+        ROOT[0]->fileOffset = 1;
         
         
         storeBPB(FAT_IMAGE_FILE_DESCRIPTOR);
@@ -997,17 +998,45 @@ TVMStatus VMDirectoryCurrent(char *abspath) {
     
 //    VMFileSystemGetAbsolutePath(abspath, "", CURRENT_PATH);
     VMFileSystemGetAbsolutePath(abspath, CURRENT_PATH, ".");
-    
+    MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
 
 
 
 }
 
+TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+
+    if(dirent == NULL){
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_ERROR_INVALID_PARAMETER;
+    }
+
+    for (int i=0; i < openEntries.size(); i++) {
+        if ((openEntries[i]->descriptor) == dirdescriptor) { //find matching directory -- ROOT[i]
+            //root directory
+            if(i == 0){
+                if(ROOT[0]->fileOffset >= ROOT.size()){
+                    MachineResumeSignals(&sigState);
+                    return VM_STATUS_FAILURE;
+                }
+                dirent = ROOT[ROOT[0]->fileOffset]->getSVMEntryRef();
+                ROOT[0]->fileOffset++;
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_SUCCESS;                
+            }
+
+            break;
+        }
+    }
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_ERROR_INVALID_PARAMETER;
+}
     
     
 TVMStatus VMDirectoryClose(int dirdescriptor) {}
-TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent) {}
 TVMStatus VMDirectoryRewind(int dirdescriptor) {}
 TVMStatus VMDirectoryChange(const char *path) {}
 
