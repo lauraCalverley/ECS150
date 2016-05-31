@@ -115,22 +115,16 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         SVMDirectoryEntry newDirEntry;
         char root[5] = "ROOT";
         // use SFN algorithm to generate DShortFileName for newDirEntry from filename
-        memcpy(newDirEntry.DShortFileName, root, strlen(filename));
+        memcpy(newDirEntry.DShortFileName, root, 5);
             
         newDirEntry.DSize = 0;
         newDirEntry.DAttributes = 0x10;
         SVMDateTime date;
-        if(VM_STATUS_SUCCESS != VMDateTime(&date)){
-            MachineResumeSignals(&sigState);
-            return VM_STATUS_FAILURE;
-        }
-         
+        VMDateTime(&date);
         newDirEntry.DCreate = date;
         newDirEntry.DAccess = date;
         newDirEntry.DModify = date;   
-                
         Entry* newEntry = new Entry(newDirEntry, 0);
-        
         ROOT.push_back(newEntry);
         
         

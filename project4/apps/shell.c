@@ -67,27 +67,27 @@ void VMMain(int argc, char *argv[]){
             
             if(VM_STATUS_SUCCESS == VMDirectoryOpen(DirectoryName, &DirDescriptor)){
                 VMPrint("   DATE   |  TIME  | TYPE |    SIZE   |    SFN      |  LFN\n");
-                while(VM_STATUS_SUCCESS == VMDirectoryRead(DirDescriptor, &DirectoryEntry)){
-                    VMPrint("%04d/%02d/%02d %02d:%02d %s ",DirectoryEntry.DModify.DYear, DirectoryEntry.DModify.DMonth, DirectoryEntry.DModify.DDay, (DirectoryEntry.DModify.DHour % 12) ? (DirectoryEntry.DModify.DHour % 12) : 12 , DirectoryEntry.DModify.DMinute, DirectoryEntry.DModify.DHour >= 12 ? "PM" : "AM");
-                    VMPrint("%s ", DirectoryEntry.DAttributes & VM_FILE_SYSTEM_ATTR_DIRECTORY ? "<DIR> " : "<FILE>");
-                    Mil = DirectoryEntry.DSize / 1000000;
-                    Kil = (DirectoryEntry.DSize / 1000) % 1000;
-                    One = DirectoryEntry.DSize % 1000;
-                    if(Mil){
-                        VMPrint("%3d,%03d,%03d ",Mil, Kil, One);   
-                    }
-                    else if(Kil){
-                        VMPrint("    %3d,%03d ", Kil, One);
-                    }
-                    else if(0 == (DirectoryEntry.DAttributes & VM_FILE_SYSTEM_ATTR_DIRECTORY)){
-                        VMPrint("        %3d ",One);
-                    }
-                    else{
-                        VMPrint("            ");   
-                    }
-                    VMPrint("%-13s %s\n",DirectoryEntry.DShortFileName, DirectoryEntry.DLongFileName);
-                }
-                VMDirectoryClose(DirDescriptor);
+//                while(VM_STATUS_SUCCESS == VMDirectoryRead(DirDescriptor, &DirectoryEntry)){
+//                    VMPrint("%04d/%02d/%02d %02d:%02d %s ",DirectoryEntry.DModify.DYear, DirectoryEntry.DModify.DMonth, DirectoryEntry.DModify.DDay, (DirectoryEntry.DModify.DHour % 12) ? (DirectoryEntry.DModify.DHour % 12) : 12 , DirectoryEntry.DModify.DMinute, DirectoryEntry.DModify.DHour >= 12 ? "PM" : "AM");
+//                    VMPrint("%s ", DirectoryEntry.DAttributes & VM_FILE_SYSTEM_ATTR_DIRECTORY ? "<DIR> " : "<FILE>");
+//                    Mil = DirectoryEntry.DSize / 1000000;
+//                    Kil = (DirectoryEntry.DSize / 1000) % 1000;
+//                    One = DirectoryEntry.DSize % 1000;
+//                    if(Mil){
+//                        VMPrint("%3d,%03d,%03d ",Mil, Kil, One);   
+//                    }
+//                    else if(Kil){
+//                        VMPrint("    %3d,%03d ", Kil, One);
+//                    }
+//                    else if(0 == (DirectoryEntry.DAttributes & VM_FILE_SYSTEM_ATTR_DIRECTORY)){
+//                        VMPrint("        %3d ",One);
+//                    }
+//                   else{
+//                        VMPrint("            ");   
+//                    }
+//                    VMPrint("%-13s %s\n",DirectoryEntry.DShortFileName, DirectoryEntry.DLongFileName);
+//               }
+//                VMDirectoryClose(DirDescriptor);
             }
             else{
                 VMPrint("Failed to open directory %s!\n", DirectoryName);   
