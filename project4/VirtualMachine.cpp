@@ -111,6 +111,27 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         
         //
      
+        //save root entry; DON'T PUSH TO FAT.ima
+        SVMDirectoryEntry newDirEntry;
+        char root[5] = "ROOT";
+        // use SFN algorithm to generate DShortFileName for newDirEntry from filename
+        memcpy(newDirEntry.DShortFileName, root, strlen(filename));
+            
+        newDirEntry.DSize = 0;
+        newDirEntry.DAttributes = 0x10;
+        SVMDateTime date;
+        if(VM_STATUS_SUCCESS != VMDateTime(&date)){
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_FAILURE;
+        }
+         
+        newDirEntry.DCreate = date;
+        newDirEntry.DAccess = date;
+        newDirEntry.DModify = date;   
+                
+        Entry* newEntry = new Entry(newDirEntry, 0);
+        
+        ROOT.push_back(newEntry);
         
         
         storeBPB(FAT_IMAGE_FILE_DESCRIPTOR);
@@ -912,6 +933,13 @@ TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
     
     bool dirFound = 0;
     int currentCluster;
+
+    if(!strcmp(dirname, "/")){
+        ROOT[0]->descriptor = NEXT_FILE_DESCRIPTOR++;
+        openEntries.push_back(ROOT[0]);
+        MachineResumeSignals(&sigState);
+        return VM_STATUS_SUCCESS;
+    }
     
     for (int i=0; i < ROOT.size(); i++) {
         if (strcmp((ROOT[i]->e.DShortFileName),dirname) == 0) { //find matching dir -- ROOT[i]
