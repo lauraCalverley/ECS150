@@ -318,7 +318,7 @@ void storeRoot(int fd){
                 fileName[8] = '\0';
                 namePtr = strtok_r(fileName, " ", &dummy1); // returns a ptr that points to the first byte of the file extension
                 if(namePtr != '\0'){ // valid SHORT entry
-                    
+                    cout << "namePtr: " << namePtr << endl;
                     char fileExt[4] = "";
                     memcpy(fileExt, (char *)sectorData+j+8, 3);
                     fileExt[3] = '\0';
@@ -329,7 +329,10 @@ void storeRoot(int fd){
                             strcat(namePtr, extPtr);
                         }
                     }
-                    memcpy(entry->DShortFileName, namePtr, strlen(namePtr));
+                    cout << "srlen(namePtr): " << strlen(namePtr) << endl;
+                    memcpy(entry->DShortFileName, namePtr, strlen(namePtr)+1);
+                    memcpy(entry->DLongFileName, namePtr, strlen(namePtr)+1);
+                    
                     memcpy(&(entry->DSize), (char *)sectorData+j+28, 4);
 
                     SVMDateTime create;
@@ -850,6 +853,11 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
     
     for (int i=0; i < ROOT.size(); i++) {
         if (strcmp((ROOT[i]->e.DShortFileName),filename) == 0) { //find matching file -- ROOT[i]
+            
+            if (ROOT[i]->directory) { // this is a directory, not a file
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_FAILURE;
+            }
 
             currentCluster = ROOT[i]->firstClusterNumber;
             // check for corruption - start with (ROOT[i]->firstClusterNumber and follow the FAT cells till 0xFFFF; corrupted = 0xFFF7
@@ -1044,19 +1052,20 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
-    cout << "dirdescriptor: " << dirdescriptor << endl;
-    cout << "ROOT[0]->descriptor: " << ROOT[0]->descriptor << endl;
+//    cout << "dirdescriptor: " << dirdescriptor << endl;
+//    cout << "ROOT[0]->descriptor: " << ROOT[0]->descriptor << endl;
 
     for (int i=0; i < openEntries.size(); i++) {
         if ((openEntries[i]->descriptor) == dirdescriptor) { //find matching directory -- ROOT[i]
-            cout << "found matching descriptor" << endl;
+//            cout << "found matching descriptor" << endl;
             //root directory
-            if(i == 0){
+            if (strcmp((openEntries[i]->e.DShortFileName),"ROOT") == 0) { //find matching entry
                 if(ROOT[0]->fileOffset >= ROOT.size()){
+                    ROOT[0]->fileOffset = 1; // reset
                     MachineResumeSignals(&sigState);
                     return VM_STATUS_FAILURE;
                 }
-                dirent = ROOT[ROOT[0]->fileOffset]->getSVMEntryRef();
+                *dirent = ROOT[ROOT[0]->fileOffset]->e;
                 ROOT[0]->fileOffset++;
                 MachineResumeSignals(&sigState);
                 return VM_STATUS_SUCCESS;                
@@ -1065,13 +1074,30 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
             break;
         }
     }
-    cout << "didn't find matching descriptor" << endl;
+//    cout << "didn't find matching descriptor" << endl;
     MachineResumeSignals(&sigState);
     return VM_STATUS_ERROR_INVALID_PARAMETER;
 }
     
     
-TVMStatus VMDirectoryClose(int dirdescriptor) {}
+TVMStatus VMDirectoryClose(int dirdescriptor) {
+    TMachineSignalState sigState;
+    MachineSuspendSignals(&sigState);
+    for (int i=0; i < openEntries.size(); i++) {
+        if ((openEntries[i]->descriptor) == dirdescriptor) { //found matching directory
+            openEntries[i]->descriptor = -1;
+            openEntries.erase(openEntries.begin()+i);
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_SUCCESS;
+        }
+    }
+
+    MachineResumeSignals(&sigState);
+    return VM_STATUS_FAILURE;
+}
+    
+    
+    
 TVMStatus VMDirectoryRewind(int dirdescriptor) {}
 TVMStatus VMDirectoryChange(const char *path) {}
 
@@ -1280,7 +1306,7 @@ int findCluster(int currentClusterNumber, int clustersToHop) {
 TVMStatus VMFileClose(int filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-
+    
     for (int i=0; i < openEntries.size(); i++) {
         if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
             openEntries[i]->descriptor = -1;
