@@ -1130,13 +1130,13 @@ TVMStatus VMDirectoryChange(const char *path) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;       
     }    
     char* saveptr;
-    char* token = strtok_r(path, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+    char* token = strtok_r((char*)path, "/", &saveptr);
     //TODO handle case where path begins with '/'
     if(!strcmp(CURRENT_PATH, "/")){ //in root directory
         for(int i = 1; i < ROOT.size(); i++){
-            if(!strcmp(token, ROOT[[i]->e.DShortFileName)){
+            if(!strcmp(token, ROOT[i]->e.DShortFileName)){
                 strcat(CURRENT_PATH, token);
-                token = strtok_r(NULL, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+                token = strtok_r(NULL, "/", &saveptr);
                 if(token == NULL){
                     MachineResumeSignals(&sigState);
                     return VM_STATUS_SUCCESS;
