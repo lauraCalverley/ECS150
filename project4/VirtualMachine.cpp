@@ -948,6 +948,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         }
     }
     else{//not in ROOT directory
+        int currentClusterNumber = ROOT[1]->firstClusterNumber;
         int currentSector = getPathSectorNumber(CURRENT_PATH);
         void* sectorData;
         VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, theBPB->BPB_BytsPerSec, &sectorData);
@@ -957,9 +958,10 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         while (1) {
             char temp[10];
             memcpy(temp, (char*)sectorData + ((offset * 32) % sectorSize), 10);
+            SVMDirectoryEntry entry;
 
             if(temp[0] == 0x00){
-                openEntries[i]->fileOffset = 0;
+                offset = 0;
                 MachineResumeSignals(&sigState);
                 return VM_STATUS_FAILURE;
             }
@@ -969,8 +971,8 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                 offset++;
                 if((offset * 32 / sectorSize) >= 1){
                     currentClusterNumber = findCluster(currentClusterNumber, 1);
-                    sectorToRead = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
-                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorToRead);
+                    currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
+                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
                 }
             }
             else { // SFN
@@ -998,6 +1000,7 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                             strcat(namePtr, extPtr);
                         }
                     }
+                    cout << "before strcmp of namePtr" << endl;
                     if(!strcmp(namePtr,filename)) {
                         offset++;
                         break;
@@ -1089,10 +1092,9 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                         }
                     }
 
-                    
                     Entry* theEntry = new Entry(entry, clusterNum, NEXT_FILE_DESCRIPTOR++);
-
                     openEntries.push_back(theEntry);
+                    *filedescriptor = openEntries[openEntries.size() - 1]->descriptor;
                     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
                     MachineResumeSignals(&sigState);
                     return VM_STATUS_SUCCESS;
@@ -1128,8 +1130,8 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
 }
 
 int getPathSectorNumber(char* path){
-    char* saveptr
-    char* token = strtok_r(path, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+    char* saveptr;
+    char* token = strtok_r(path, "/", &saveptr);
     int result;
     int apps;
     for(int i = 1; i < ROOT.size(); i++){
@@ -1146,7 +1148,7 @@ int getPathSectorNumber(char* path){
         else if(!strcmp(token, "..")){
             result = theBPB->FirstRootSector;
         }
-        token = strtok_r(NULL, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+        token = strtok_r(NULL, "/", &saveptr);
     }
     return result;
 }
