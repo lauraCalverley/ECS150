@@ -141,7 +141,7 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         void MachineFileWrite(int fd, void *data, int length, TMachineFileCallback callback, void *calldata);
         void MachineFileSeek(int fd, int offset, int whence, TMachineFileCallback callback, void *calldata);  
 
-        TVMThreadID savedCurrentThread = CURRENT_THREAD;    
+        //TVMThreadID savedCurrentThread = CURRENT_THREAD;    
         
         //write FAT
         // MachineFileSeek(FAT_IMAGE_FILE_DESCRIPTOR, theBPB->BPB_RsvdSecCnt * theBPB->BPB_BytsPerSec, 0, callbackMachineFile, &savedCurrentThread);
