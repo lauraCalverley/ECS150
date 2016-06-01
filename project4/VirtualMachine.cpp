@@ -14,10 +14,6 @@
 #include <queue>
 #include <stdint.h>
 
-#include <cstdio> //temp
-#include <iostream> //temp
-#include <bitset> // temp
-
 extern "C" {
 using namespace std;
 
@@ -111,7 +107,6 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
             return VM_STATUS_FAILURE;
         }
         
-        //
      
         //save root entry; DON'T PUSH TO FAT.ima
         SVMDirectoryEntry newDirEntry;
@@ -244,14 +239,6 @@ void readSector(int fd, char *sectorData, int sectorNumber) {
     MachineFileRead(fd, sectorData, 512, callbackMachineFile, &savedCurrentThread);
     Scheduler(6,savedCurrentThread);
     
-//    int result = threadVector[savedCurrentThread]->getMachineFileFunctionResult();
-    
-//    if (result < 0) {
-//        cout << "ERROR in readSector" << endl;
-//    }
-//    else {
-//        cout << "bytes read: " << result << endl;
-//    }
     MachineResumeSignals(&sigState);
 }
 
@@ -262,15 +249,14 @@ void storeBPB(int fd) {
     void *sectorData;
     VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, 512, &sectorData);
     readSector(fd, (char*)sectorData, 0);
-    cout << "BPB SECTOR: " << (char*)sectorData << endl;
 
-    uint16_t BPB_BytsPerSec = *(uint16_t *)((char*)sectorData + 11); // CITE Nitta
-    uint8_t BPB_SecPerClus = *(uint8_t *)((char*)sectorData + 13); // CITE Nitta FIXME - remove (int) cast?
-    uint16_t BPB_RsvdSecCnt = *(uint16_t *)((char*)sectorData + 14); // CITE Nitta
-    uint8_t BPB_NumFATs = *(uint8_t *)((char*)sectorData + 16); // CITE Nitta FIXME - remove (int) cast?
-    uint16_t BPB_RootEntCnt = *(uint16_t *)((char*)sectorData + 17); // CITE Nitta
-    uint16_t BPB_FATSz16 = *(uint16_t *)((char*)sectorData + 22); // CITE Nitta
-    uint32_t BPB_TotSec32 = *(uint32_t *)((char*)sectorData + 32); // CITE Nitta
+    uint16_t BPB_BytsPerSec = *(uint16_t *)((char*)sectorData + 11); 
+    uint8_t BPB_SecPerClus = *(uint8_t *)((char*)sectorData + 13); 
+    uint16_t BPB_RsvdSecCnt = *(uint16_t *)((char*)sectorData + 14);
+    uint8_t BPB_NumFATs = *(uint8_t *)((char*)sectorData + 16); 
+    uint16_t BPB_RootEntCnt = *(uint16_t *)((char*)sectorData + 17);
+    uint16_t BPB_FATSz16 = *(uint16_t *)((char*)sectorData + 22);   
+    uint32_t BPB_TotSec32 = *(uint32_t *)((char*)sectorData + 32); 
     
     theBPB = new BPB(BPB_BytsPerSec, BPB_SecPerClus, BPB_RsvdSecCnt, BPB_NumFATs, BPB_RootEntCnt, BPB_FATSz16, BPB_TotSec32);
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
@@ -294,24 +280,6 @@ void storeFAT(int fd){
 
         sectorNumber++;
     }
-
-    // int k = 0;
-    // for(int i = 0; i < 15; i++){
-    //     printf("%07X0: ", i);
-    //     for(int j = 0; j < 8; j++){
-    //         if(FAT[k] == 0xffff){
-    //             printf("END  ");
-    //         }
-    //         else if(FAT[k] == 0){
-    //             printf("FREE ");
-    //         }
-    //         else{
-    //             printf("%04X ", FAT[k]);
-    //         }
-    //         k++;
-    //     }
-    //     cout << endl;
-    // }
 
     VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
     MachineResumeSignals(&sigState);
@@ -343,7 +311,6 @@ void storeRoot(int fd){
                 fileName[8] = '\0';
                 namePtr = strtok_r(fileName, " ", &dummy1); // returns a ptr that points to the first byte of the file extension
                 if(namePtr != '\0'){ // valid SHORT entry
-                    cout << "namePtr: " << namePtr << endl;
                     char fileExt[4] = "";
                     memcpy(fileExt, (char *)sectorData+j+8, 3);
                     fileExt[3] = '\0';
@@ -354,7 +321,6 @@ void storeRoot(int fd){
                             strcat(namePtr, extPtr);
                         }
                     }
-                    cout << "srlen(namePtr): " << strlen(namePtr) << endl;
                     memcpy(entry->DShortFileName, namePtr, strlen(namePtr)+1);
                     memcpy(entry->DLongFileName, namePtr, strlen(namePtr)+1);
                     
@@ -383,9 +349,6 @@ void storeRoot(int fd){
                     
                     create.DSecond += (create.DHundredth / 100);
                     create.DHundredth = create.DHundredth % 100;
-//                    cout << "CREATE" << endl;
-//                   VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",create.DYear, create.DMonth, create.DDay, (create.DHour % 12) ? (create.DHour % 12) : 12 , create.DMinute, create.DSecond, create.DHundredth, create.DHour >= 12 ? "PM" : "AM");
-                    
                            
                     uint16_t accessDate;
                     memcpy(&accessDate, (char *)sectorData+j+18, 2);
@@ -401,8 +364,6 @@ void storeRoot(int fd){
                     access.DMinute = 0;
                     access.DHour = 0;
                     access.DHundredth = 0;
-//                    cout << "ACCESS" << endl;
-//                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
                     
                     uint16_t modifyDate;
                     memcpy(&modifyDate, (char *)sectorData+j+24, 2);
@@ -420,9 +381,6 @@ void storeRoot(int fd){
                     modify.DHour = (modifyTime & 0xF800) >> 11;
                     
                     modify.DHundredth = 0;
-//                    cout << "MODIFY" << endl;
-//                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",modify.DYear, modify.DMonth, modify.DDay, (modify.DHour % 12) ? (modify.DHour % 12) : 12 , modify.DMinute, modify.DSecond, modify.DHundredth, modify.DHour >= 12 ? "PM" : "AM");
-//                    cout << endl;
 
                     entry->DCreate = create;
                     entry->DAccess = access;
@@ -431,10 +389,8 @@ void storeRoot(int fd){
                     uint16_t firstClusterStart;
                     memcpy(&firstClusterStart, (char *)sectorData+j+26, 2);
                     
-                    theEntry = new Entry(*entry, firstClusterStart); // FIXME perhaps change entry to be a non-ref
+                    theEntry = new Entry(*entry, firstClusterStart); 
 
- 
-//                    cout << "theSIZE: " << theEntry->e.DSize << " FIRST CLUSTER: " << theEntry->firstClusterNumber << " The NAME: " << theEntry->e.DShortFileName << endl;;
                     ROOT.push_back(theEntry);
                     
                 }
@@ -741,7 +697,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
         int lengthToWrite = *length; // allows us to update length with bytes actually read as we go 
         for (int i=0; i < openEntries.size(); i++) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
-                // FIXME check other permission cases?
 
                 //check for write permission
                 if(openEntries[i]->writeable == 0){
@@ -757,10 +712,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                 int offset = openEntries[i]->fileOffset; // # bytes
                 int currentClusterNumber = openEntries[i]->firstClusterNumber; //starting cluster w/out offset
 
-                //if((offset + lengthToWrite) > openEntries[i]->e.DSize){
-                //    lengthToWrite = openEntries[i]->e.DSize - offset;
-                //}
-
                 // determine # of sectors to write to
                 int sectorCount = 1;
                 for (int i=0; i < offset+lengthToWrite; i += sectorSize) {
@@ -769,11 +720,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                     }
                 }
                 
-                //create a vector of all sector numbers that need to be written to
-                //iterate through the entry's dirty sectors and write to those if they match a sector number that needs to be written to, then 
-                //    remove those sectors from sector number vector
-                //read in remaining sectors, write to them, then push to entry's dirtySector vector
-
                 //create a vector of all sector numbers that need to be written to
                 vector<int> sectorsToWrite;
                 int currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
@@ -817,7 +763,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
                     if(sectorIsDirty == 0){
                         //read in data sector
                         readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorsToWrite[j]);
-                        // memcpy((char*)sectorData + sectorSize, "\0", 1);
                         
                         //write to sector at offset
                         int writeSize = (lengthToWrite < (sectorSize - offset)) ? lengthToWrite : (sectorSize - offset);
@@ -826,10 +771,7 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
 
                         //push to dirtySector
                         Entry::Sector tempSector;
-//                        char tempDataPtr[sectorSize];
                         memcpy(tempSector.data, (char*)sectorData, sectorSize);
-//                        tempSector.data = tempDataPtr;
-//                        memcpy(tempSector.data, tempDataPtr, sectorSize);
                         
                         tempSector.sectorNumber = sectorsToWrite[j];
                         openEntries[i]->dirtySectors.push_back(tempSector);
@@ -862,8 +804,6 @@ TVMStatus VMFileWrite(int filedescriptor, void *data, int *length) {
     }
 }
 
-//    VMFileOpen("test.txt", O_CREAT | O_TRUNC | O_RDWR, 0644, &FileDescriptor);
-//    for now, assume that the filename is in the cwd=root and file exists
 TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescriptor) {
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
@@ -899,10 +839,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                     }
                 }
                 
-                // TO DO check permissions of file and permissions of VMFileOpen call are compatible
-                // flags used by given apps: o_rdonly, o_creat | o_trunc | o_rdwr
-                //    o_creat: if file needs to be created it is created using the mode bits passed in
-                //    o_trunc: file is truncated to length 0
                 if((flags & O_RDWR) == O_RDWR){
                     ROOT[i]->writeable = 1;
                 }
@@ -924,7 +860,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         if(fileFound == 0){
             //create SVMDirectoryEntry
             SVMDirectoryEntry newDirEntry;
-            // newDirEntry.DShortFileName = *filename;
             
             // use SFN algorithm to generate DShortFileName for newDirEntry from filename
             memcpy(newDirEntry.DShortFileName, filename, strlen(filename) + 1);
@@ -994,7 +929,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                 }
             }
             else { // SFN
-//                        cout << "found a short file entry" << endl;
                 char *namePtr;
                 char *extPtr;
                 
@@ -1003,11 +937,8 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                 char *dummy2;
                 memcpy(fileName, (char *)sectorData+ ((offset * 32) % sectorSize) , 8);
                 fileName[8] = '\0';
-//                        cout << "filename is: " << (char*)fileName << endl;
                 namePtr = strtok_r(fileName, " ", &dummy1);
-//                        cout << "namePtr: " << namePtr << endl;
                 if(namePtr != '\0'){ // valid SHORT entry
-//                            cout << "namePtr: " << namePtr << endl;
                     char fileExt[4] = "";
                     memcpy(fileExt, (char *)sectorData+ ((offset * 32) % sectorSize) +8, 3);
                     fileExt[3] = '\0';
@@ -1023,7 +954,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                         offset++;
                         break;
                     }
-//                            cout << "srlen(namePtr): " << strlen(namePtr) << endl;
                     memcpy(entry.DShortFileName, namePtr, strlen(namePtr)+1);
                     memcpy(entry.DLongFileName, namePtr, strlen(namePtr)+1);
                     
@@ -1052,8 +982,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                     
                     create.DSecond += (create.DHundredth / 100);
                     create.DHundredth = create.DHundredth % 100;
-                    //                    cout << "CREATE" << endl;
-                    //                   VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",create.DYear, create.DMonth, create.DDay, (create.DHour % 12) ? (create.DHour % 12) : 12 , create.DMinute, create.DSecond, create.DHundredth, create.DHour >= 12 ? "PM" : "AM");
                     
                     
                     uint16_t accessDate;
@@ -1070,8 +998,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                     access.DMinute = 0;
                     access.DHour = 0;
                     access.DHundredth = 0;
-                    //                    cout << "ACCESS" << endl;
-                    //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
                     
                     uint16_t modifyDate;
                     memcpy(&modifyDate, (char *)sectorData+ ((offset * 32) % sectorSize) +24, 2);
@@ -1089,9 +1015,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                     modify.DHour = (modifyTime & 0xF800) >> 11;
                     
                     modify.DHundredth = 0;
-                    //                    cout << "MODIFY" << endl;
-                    //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",modify.DYear, modify.DMonth, modify.DDay, (modify.DHour % 12) ? (modify.DHour % 12) : 12 , modify.DMinute, modify.DSecond, modify.DHundredth, modify.DHour >= 12 ? "PM" : "AM");
-                    //                    cout << endl;
                     
                     entry.DCreate = create;
                     entry.DAccess = access;
@@ -1118,7 +1041,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
                     return VM_STATUS_SUCCESS;
                 }
                 else {
-                    cout << "else...I don't think it should be here" << endl;
                     offset++;
                 }
             }
@@ -1128,14 +1050,6 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
 
     }
 
-    
-    // SCHEDULE SOMEWHERE???
-    
-//    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-//    MachineFileOpen(filename, flags, mode, callbackMachineFile, &savedCURRENTTHREAD);
-//    Scheduler(6,CURRENT_THREAD);
-//
-//    *filedescriptor = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
     if (*filedescriptor < 3) {
         MachineResumeSignals(&sigState);
@@ -1218,17 +1132,8 @@ TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
     
     //if dir not found create it
     if(dirFound == 0){
-        cout << "Directory NOT FOUND" << endl;
         *dirdescriptor = -1;
     }
-    
-    // SCHEDULE SOMEWHERE???
-    
-    //    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-    //    MachineFileOpen(filename, flags, mode, callbackMachineFile, &savedCURRENTTHREAD);
-    //    Scheduler(6,CURRENT_THREAD);
-    //
-    //    *filedescriptor = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
     
     if (*dirdescriptor < 3) {
         MachineResumeSignals(&sigState);
@@ -1251,7 +1156,6 @@ TVMStatus VMDirectoryCurrent(char *abspath) {
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
     
-//    VMFileSystemGetAbsolutePath(abspath, "", CURRENT_PATH);
     VMFileSystemGetAbsolutePath(abspath, CURRENT_PATH, ".");
     MachineResumeSignals(&sigState);
     return VM_STATUS_SUCCESS;
@@ -1271,7 +1175,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
     int sectorSize = theBPB->BPB_BytsPerSec;
     for (int i=0; i < openEntries.size(); i++) {
         if ((openEntries[i]->descriptor) == dirdescriptor) { //find matching directory -- ROOT[i]
-//            cout << "found matching descriptor" << endl;
             //root directory
             if (strcmp((openEntries[i]->e.DShortFileName),"ROOT") == 0) { //find matching entry
                 if(ROOT[0]->fileOffset >= ROOT.size()){
@@ -1285,9 +1188,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                 return VM_STATUS_SUCCESS;                
             }
             else { //not in root
-                
-//                cout << "WE ARE HERE" << endl;
-                
                 void *sectorData;
                 VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, theBPB->BPB_BytsPerSec, &sectorData);
                 
@@ -1326,7 +1226,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                         }
                     }
                     else { // SFN
-//                        cout << "found a short file entry" << endl;
                         char *namePtr;
                         char *extPtr;
                         
@@ -1335,11 +1234,8 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                         char *dummy2;
                         memcpy(fileName, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) , 8);
                         fileName[8] = '\0';
-//                        cout << "filename is: " << (char*)fileName << endl;
                         namePtr = strtok_r(fileName, " ", &dummy1);
-//                        cout << "namePtr: " << namePtr << endl;
                         if(namePtr != '\0'){ // valid SHORT entry
-//                            cout << "namePtr: " << namePtr << endl;
                             char fileExt[4] = "";
                             memcpy(fileExt, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +8, 3);
                             fileExt[3] = '\0';
@@ -1350,7 +1246,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                                     strcat(namePtr, extPtr);
                                 }
                             }
-//                            cout << "srlen(namePtr): " << strlen(namePtr) << endl;
                             memcpy(entry.DShortFileName, namePtr, strlen(namePtr)+1);
                             memcpy(entry.DLongFileName, namePtr, strlen(namePtr)+1);
                             
@@ -1379,9 +1274,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             
                             create.DSecond += (create.DHundredth / 100);
                             create.DHundredth = create.DHundredth % 100;
-                            //                    cout << "CREATE" << endl;
-                            //                   VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",create.DYear, create.DMonth, create.DDay, (create.DHour % 12) ? (create.DHour % 12) : 12 , create.DMinute, create.DSecond, create.DHundredth, create.DHour >= 12 ? "PM" : "AM");
-                            
                             
                             uint16_t accessDate;
                             memcpy(&accessDate, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +18, 2);
@@ -1397,8 +1289,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             access.DMinute = 0;
                             access.DHour = 0;
                             access.DHundredth = 0;
-                            //                    cout << "ACCESS" << endl;
-                            //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
                             
                             uint16_t modifyDate;
                             memcpy(&modifyDate, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +24, 2);
@@ -1416,9 +1306,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             modify.DHour = (modifyTime & 0xF800) >> 11;
                             
                             modify.DHundredth = 0;
-                            //                    cout << "MODIFY" << endl;
-                            //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",modify.DYear, modify.DMonth, modify.DDay, (modify.DHour % 12) ? (modify.DHour % 12) : 12 , modify.DMinute, modify.DSecond, modify.DHundredth, modify.DHour >= 12 ? "PM" : "AM");
-                            //                    cout << endl;
                             
                             entry.DCreate = create;
                             entry.DAccess = access;
@@ -1434,7 +1321,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             return VM_STATUS_SUCCESS;
                         }
                         else {
-                            cout << "else...I don't think it should be here" << endl;
                             openEntries[i]->fileOffset++;
                         }
                     }
@@ -1444,7 +1330,6 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
             break;
         } // if
     } // for
-//    cout << "didn't find matching descriptor" << endl;
     MachineResumeSignals(&sigState);
     return VM_STATUS_ERROR_INVALID_PARAMETER;
 }
@@ -1500,7 +1385,6 @@ TVMStatus VMDirectoryChange(const char *path) {
     }    
     char* saveptr;
     char* token = strtok_r((char*)path, "/", &saveptr);
-    //TODO handle case where path begins with '/'
     if(!strcmp(CURRENT_PATH, "/")){ //in root directory
         for(int i = 1; i < ROOT.size(); i++){
             if(!strcmp(token, ROOT[i]->e.DShortFileName)){
@@ -1525,7 +1409,6 @@ TVMStatus VMDirectoryChange(const char *path) {
         }
         memcpy(CURRENT_PATH, temp, VM_FILE_SYSTEM_MAX_PATH);
 
-        //FOR NOW
         CURRENT_PATH_SECTOR = theBPB->FirstRootSector;
 
         MachineResumeSignals(&sigState);
@@ -1628,18 +1511,15 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
     }
     else {
         
-//    TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
         int lengthToRead = *length; // allows us to update length with bytes actually read as we go
         
         for (int i=0; i < openEntries.size(); i++) {
             if ((openEntries[i]->descriptor) == filedescriptor) { //find matching file -- ROOT[i]
-                // FIXME check other permission cases?              
                 
                 int sectorSize = theBPB->BPB_BytsPerSec;
                 void *sectorData;
                 VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorSize, &sectorData);
 
-                //int sectorSize = theBPB->BPB_BytsPerSec; // # bytes
                 int offset = openEntries[i]->fileOffset; // # bytes
                 int currentClusterNumber = openEntries[i]->firstClusterNumber;
 
@@ -1658,8 +1538,6 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                 int currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
                 char tempData[lengthToRead + 1022];
                 tempData[0] = '\0';
-                //int sectorNumber;
-                //sectorsToRead = 3;
                 for(int j= 0; j < sectorsToRead; j++){
                     bool sectorIsDirty = 0;
                     //check if its already dirty
@@ -1675,43 +1553,22 @@ TVMStatus VMFileRead(int filedescriptor, void *data, int *length) {
                     if (!sectorIsDirty) {
                         readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
                     }
-//                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
-                    //cout << "i: " << i << " sectorsToRead: " << sectorsToRead << endl;
-                    //cout << "last character of sectorData: " << sectorData + sectorSize << endl;
                     char *dummy = "\0";
                     memcpy((char*)sectorData + sectorSize, dummy, 1);
                     
                     strcat(tempData, (char*)sectorData);
                     
-                    //cout << "tempData length: " << strlen(tempData) << endl;
-                    //tempData[(i + 1) * sectorSize] = '\0';
-                    //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                    //cout << "tempData: " << tempData << endl;
-                    //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
                     currentSector++;
                     if(((currentSector + 1) % theBPB->BPB_SecPerClus) == 0){
-                        //cout << "searching for next cluster" << endl;
                         currentClusterNumber = findCluster(currentClusterNumber, 1);
                         currentSector = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
                     }
                 }
 
-                //cout << "out of for loop" << endl;
-                //cout << "tempData length: " << strlen(tempData) << endl;
-                //cout << "tempData: " << tempData << endl;
-
-                //cout << "made it out of the for loop" << endl;
-
                 // trim edges
                 memcpy((char*)data, tempData + (offset % sectorSize), lengthToRead);
                 *length = lengthToRead;
                 openEntries[i]->fileOffset += lengthToRead;
-                
-                //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-                //cout << "data: " << (char*)data << endl;
-                //cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" << endl;
-
-                
                 
                 VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
                 MachineResumeSignals(&sigState);
@@ -1751,26 +1608,7 @@ TVMStatus VMFileClose(int filedescriptor) {
 
     MachineResumeSignals(&sigState);
     return VM_STATUS_FAILURE;
-
-    
-    
-//    TVMThreadID savedCURRENTTHREAD = CURRENT_THREAD;
-//    MachineFileClose(filedescriptor, callbackMachineFile, &savedCURRENTTHREAD);
-//    Scheduler(6,CURRENT_THREAD);
-//
-//    int status = threadVector[savedCURRENTTHREAD]->getMachineFileFunctionResult();
-    
-//    if (status < 0) {
-//        MachineResumeSignals(&sigState);
-//        return VM_STATUS_FAILURE;
-//    }
-//    else {
-//        MachineResumeSignals(&sigState);
-//        return VM_STATUS_SUCCESS;
-//    }
 }
-
-
 
 //VM Thread functions
 bool threadExists(TVMThreadID thread) {
@@ -2222,9 +2060,4 @@ void Scheduler(int transition, TVMThreadID thread) {
     }
 }    
 }
-
-// NOTES
-/*
-Read of length > clusterSize repeat the first cluster's final sector's data...???
- */
 
