@@ -134,6 +134,9 @@ TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, 
         storeFAT(FAT_IMAGE_FILE_DESCRIPTOR);
         storeRoot(FAT_IMAGE_FILE_DESCRIPTOR);
 
+        cout << "ROOT[1]->e.DShortFileName: " << ROOT[1]->e.DShortFileName << endl;
+        cout << "offset: " << ROOT[1]->fileOffset << endl;
+
         CURRENT_PATH_SECTOR = theBPB->FirstRootSector;
 
         int Mil, Kil, One;
@@ -1055,9 +1058,8 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
-
+ 
     int sectorSize = theBPB->BPB_BytsPerSec;
-
     for (int i=0; i < openEntries.size(); i++) {
         if ((openEntries[i]->descriptor) == dirdescriptor) { //find matching directory -- ROOT[i]
 //            cout << "found matching descriptor" << endl;
@@ -1083,35 +1085,34 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                 
                 SVMDirectoryEntry entry; // NOT a pointer, so: *dirent = entry;
 
-                int currentClusterNumber = ROOT[i]->firstClusterNumber;
+                int currentClusterNumber = openEntries[i]->firstClusterNumber;
                 int sectorToRead = CURRENT_PATH_SECTOR;
-                int sectorsToHop = ROOT[i]->fileOffset * 32 / sectorSize;
+                int sectorsToHop = openEntries[i]->fileOffset * 32 / sectorSize;
                 for(int j = 0; j < sectorsToHop; j++){
                     sectorToRead++;
-                    if(((currentsectorToReadSector + 1) % theBPB->BPB_SecPerClus) == 0){
+                    if(((sectorToRead + 1) % theBPB->BPB_SecPerClus) == 0){
                         currentClusterNumber = findCluster(currentClusterNumber, 1);
-                        sectorToRead = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (ROOT[i]->fileOffset / sectorSize);
+                        sectorToRead = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (openEntries[i]->fileOffset / sectorSize);
                     }
                 }
 
                 readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorToRead);
-                
-//                cout << "SECTOR DATA: " << (char*)sectorData << endl;
-                
                 while (1) {
-                    if(((char*)sectorData + ((ROOT[i]->fileOffset * 32) % sectorSize)) == 0x00){
-                        cout << "end of directory entries" << endl;
+                    char temp[10];
+                    memcpy(temp, (char*)sectorData + ((openEntries[i]->fileOffset * 32) % sectorSize), 10);
+
+                    if(temp[0] == 0x00){
+                        openEntries[i]->fileOffset = 0;
                         MachineResumeSignals(&sigState);
                         return VM_STATUS_FAILURE;
                     }
-//                    cout << "offset: " << ROOT[i]->fileOffset << endl;
-                    memcpy(&entry.DAttributes, (char *)sectorData + ((ROOT[i]->fileOffset * 32) % sectorSize) + 11, 1);
+                    memcpy(&entry.DAttributes, (char *)sectorData + ((openEntries[i]->fileOffset * 32) % sectorSize) + 11, 1);
                 
                     if ((entry.DAttributes & 0x0F) == 0x0F) { // LFN
-                        ROOT[i]->fileOffset++;
-                        if((ROOT[i]->fileOffset * 32 / sectorSize) >= 1){
+                        openEntries[i]->fileOffset++;
+                        if((openEntries[i]->fileOffset * 32 / sectorSize) >= 1){
                             currentClusterNumber = findCluster(currentClusterNumber, 1);
-                            sectorToRead = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (ROOT[i]->fileOffset / sectorSize);
+                            sectorToRead = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (openEntries[i]->fileOffset / sectorSize);
                             readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorToRead);
                         }
                     }
@@ -1123,7 +1124,7 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                         char fileName[9] = "";
                         char *dummy1;
                         char *dummy2;
-                        memcpy(fileName, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) , 8);
+                        memcpy(fileName, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) , 8);
                         fileName[8] = '\0';
 //                        cout << "filename is: " << (char*)fileName << endl;
                         namePtr = strtok_r(fileName, " ", &dummy1);
@@ -1131,7 +1132,7 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                         if(namePtr != '\0'){ // valid SHORT entry
 //                            cout << "namePtr: " << namePtr << endl;
                             char fileExt[4] = "";
-                            memcpy(fileExt, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +8, 3);
+                            memcpy(fileExt, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +8, 3);
                             fileExt[3] = '\0';
                             if (fileExt[0] != ' ') {
                                 extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
@@ -1144,14 +1145,14 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             memcpy(entry.DShortFileName, namePtr, strlen(namePtr)+1);
                             memcpy(entry.DLongFileName, namePtr, strlen(namePtr)+1);
                             
-                            memcpy(&(entry.DSize), (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +28, 4);
+                            memcpy(&(entry.DSize), (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +28, 4);
                             
                             SVMDateTime create;
                             SVMDateTime access;
                             SVMDateTime modify;
                             
                             uint16_t createDate;
-                            memcpy(&createDate, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +16, 2);
+                            memcpy(&createDate, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +16, 2);
                             
                             // 0-4 day of month: range 1-31
                             // 5-8 month of year: range 1-12
@@ -1160,12 +1161,12 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             create.DMonth = (createDate & 0x01E0) >> 5;
                             create.DYear = ((createDate & 0xFE00) >> 9)+ 1980;
                             uint16_t time;
-                            memcpy(&time, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +14, 2);
+                            memcpy(&time, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +14, 2);
                             create.DSecond = (time & 0x1F) * 2;
                             create.DMinute = (time & 0x7E0) >> 5;
                             create.DHour = (time & 0xF800) >> 11;
                             
-                            memcpy(&create.DHundredth, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +13, 1); // add 1 second if necessary then % 100
+                            memcpy(&create.DHundredth, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +13, 1); // add 1 second if necessary then % 100
                             
                             create.DSecond += (create.DHundredth / 100);
                             create.DHundredth = create.DHundredth % 100;
@@ -1174,7 +1175,7 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             
                             
                             uint16_t accessDate;
-                            memcpy(&accessDate, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +18, 2);
+                            memcpy(&accessDate, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +18, 2);
                             
                             // 0-4 day of month: range 1-31
                             // 5-8 month of year: range 1-12
@@ -1191,7 +1192,7 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
                             
                             uint16_t modifyDate;
-                            memcpy(&modifyDate, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +24, 2);
+                            memcpy(&modifyDate, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +24, 2);
                             
                             // 0-4 day of month: range 1-31
                             // 5-8 month of year: range 1-12
@@ -1200,7 +1201,7 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             modify.DMonth = (modifyDate & 0x01E0) >> 5;
                             modify.DYear = ((modifyDate & 0xFE00) >> 9)+ 1980;
                             uint16_t modifyTime;
-                            memcpy(&modifyTime, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +22, 2);
+                            memcpy(&modifyTime, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +22, 2);
                             modify.DSecond = (modifyTime & 0x1F) * 2;
                             modify.DMinute = (modifyTime & 0x7E0) >> 5;
                             modify.DHour = (modifyTime & 0xF800) >> 11;
@@ -1215,17 +1216,17 @@ TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
                             entry.DModify = modify;
                             
                             uint16_t firstClusterStart;
-                            memcpy(&firstClusterStart, (char *)sectorData+ ((ROOT[i]->fileOffset * 32) % sectorSize) +26, 2);
+                            memcpy(&firstClusterStart, (char *)sectorData+ ((openEntries[i]->fileOffset * 32) % sectorSize) +26, 2);
                             
                             *dirent = entry;
-                            ROOT[i]->fileOffset++;
+                            openEntries[i]->fileOffset++;
                             VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
                             MachineResumeSignals(&sigState);
                             return VM_STATUS_SUCCESS;
                         }
                         else {
                             cout << "else...I don't think it should be here" << endl;
-                            ROOT[i]->fileOffset++;
+                            openEntries[i]->fileOffset++;
                         }
                     }
                 } // while
