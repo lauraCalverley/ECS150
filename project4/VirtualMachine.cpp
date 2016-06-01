@@ -1307,10 +1307,20 @@ TVMStatus VMDirectoryChange(const char *path) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_FAILURE;
     }
-    else{ //not in root
+    else { //not in root
+        char temp[VM_FILE_SYSTEM_MAX_PATH];
+
+        if(VM_STATUS_SUCCESS != VMFileSystemGetAbsolutePath(temp, CURRENT_PATH, path)){
+            MachineResumeSignals(&sigState);
+            return VM_STATUS_FAILURE;
+        }
+        memcpy(CURRENT_PATH, temp, VM_FILE_SYSTEM_MAX_PATH);
+
+        //FOR NOW
+        CURRENT_PATH_SECTOR = theBPB->FirstRootSector;
 
         MachineResumeSignals(&sigState);
-        return VM_STATUS_FAILURE;
+        return VM_STATUS_SUCCESS;
     }
 }
 
