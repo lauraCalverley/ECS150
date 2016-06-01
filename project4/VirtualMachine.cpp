@@ -62,6 +62,7 @@ void storeBPB(int fd);
 void storeFAT(int fd);
 void storeRoot(int fd);
 int findCluster(int currentClusterNumber, int clustersToHop);
+int getPathSectorNumber(char* path);
 
     
 TVMStatus VMStart(int tickms, TVMMemorySize heapsize, TVMMemorySize sharedsize, const char *mount, int argc, char *argv[]) {
@@ -856,93 +857,257 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
     
     bool fileFound = 0;
     int currentCluster;
+    int sectorSize = theBPB->BPB_BytsPerSec;
     
-    for (int i=0; i < ROOT.size(); i++) {
-        if (strcmp((ROOT[i]->e.DShortFileName),filename) == 0) { //find matching file -- ROOT[i]
-            
-            if (ROOT[i]->directory) { // this is a directory, not a file
-                MachineResumeSignals(&sigState);
-                return VM_STATUS_FAILURE;
-            }
 
-            currentCluster = ROOT[i]->firstClusterNumber;
-            // check for corruption - start with (ROOT[i]->firstClusterNumber and follow the FAT cells till 0xFFFF; corrupted = 0xFFF7
-            while (currentCluster != 0xFFFF) {
-                if (currentCluster == 0xFFF7) {
+    if(!strcmp(CURRENT_PATH, "/")){ // in root directory
+        for (int i=0; i < ROOT.size(); i++) {
+            if (strcmp((ROOT[i]->e.DShortFileName),filename) == 0) { //find matching file -- ROOT[i]
+                
+                if (ROOT[i]->directory) { // this is a directory, not a file
                     MachineResumeSignals(&sigState);
-                    return VM_STATUS_FAILURE; // file is corrupted - do not open
+                    return VM_STATUS_FAILURE;
                 }
-                else {
-                    currentCluster = FAT[currentCluster];
-                }
-            }
-            
-            // TO DO check permissions of file and permissions of VMFileOpen call are compatible
-            // flags used by given apps: o_rdonly, o_creat | o_trunc | o_rdwr
-            //    o_creat: if file needs to be created it is created using the mode bits passed in
-            //    o_trunc: file is truncated to length 0
-            if((flags & O_RDWR) == O_RDWR){
-                ROOT[i]->writeable = 1;
-            }
-            else{
-                ROOT[i]->writeable = 0;
-            }
-            
-            // create and save file descriptor
-            ROOT[i]->descriptor = NEXT_FILE_DESCRIPTOR++;
-            openEntries.push_back(ROOT[i]);
-            
-            
-            *filedescriptor = ROOT[i]->descriptor;
-            fileFound = 1;
-            break;
-        }
-    }
 
-    //if file not found create it
-    if(fileFound == 0){
-        //create SVMDirectoryEntry
-        SVMDirectoryEntry newDirEntry;
-        // newDirEntry.DShortFileName = *filename;
-        
-        // use SFN algorithm to generate DShortFileName for newDirEntry from filename
-        memcpy(newDirEntry.DShortFileName, filename, strlen(filename) + 1);
-        memcpy(newDirEntry.DLongFileName, filename, strlen(filename) + 1);
-            
-        newDirEntry.DSize = 0;
-        newDirEntry.DAttributes = 0x00;
-        SVMDateTime date;
-        if(VM_STATUS_SUCCESS != VMDateTime(&date)){
-            MachineResumeSignals(&sigState);
-            return VM_STATUS_FAILURE;
-        }
-         
-        newDirEntry.DCreate = date;
-        newDirEntry.DAccess = date;
-        newDirEntry.DModify = date;    
-        
-        //find first free cluster number and replace fat with fff8
-        int clusterNum = 0;
-        for(int i = 0; i < FAT.size(); i++){
-            if(FAT[i] == 0x0000){
-                clusterNum = i;
-                FAT[i] = 0xfff8;
+                currentCluster = ROOT[i]->firstClusterNumber;
+                // check for corruption - start with (ROOT[i]->firstClusterNumber and follow the FAT cells till 0xFFFF; corrupted = 0xFFF7
+                while (currentCluster != 0xFFFF) {
+                    if (currentCluster == 0xFFF7) {
+                        MachineResumeSignals(&sigState);
+                        return VM_STATUS_FAILURE; // file is corrupted - do not open
+                    }
+                    else {
+                        currentCluster = FAT[currentCluster];
+                    }
+                }
+                
+                // TO DO check permissions of file and permissions of VMFileOpen call are compatible
+                // flags used by given apps: o_rdonly, o_creat | o_trunc | o_rdwr
+                //    o_creat: if file needs to be created it is created using the mode bits passed in
+                //    o_trunc: file is truncated to length 0
+                if((flags & O_RDWR) == O_RDWR){
+                    ROOT[i]->writeable = 1;
+                }
+                else{
+                    ROOT[i]->writeable = 0;
+                }
+                
+                // create and save file descriptor
+                ROOT[i]->descriptor = NEXT_FILE_DESCRIPTOR++;
+                openEntries.push_back(ROOT[i]);
+                
+                
+                *filedescriptor = ROOT[i]->descriptor;
+                fileFound = 1;
                 break;
             }
         }
+        //if file not found create it
+        if(fileFound == 0){
+            //create SVMDirectoryEntry
+            SVMDirectoryEntry newDirEntry;
+            // newDirEntry.DShortFileName = *filename;
+            
+            // use SFN algorithm to generate DShortFileName for newDirEntry from filename
+            memcpy(newDirEntry.DShortFileName, filename, strlen(filename) + 1);
+            memcpy(newDirEntry.DLongFileName, filename, strlen(filename) + 1);
                 
-        Entry* newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
-        if((flags & O_RDWR) == O_RDWR){
-            newEntry->writeable = 1;
+            newDirEntry.DSize = 0;
+            newDirEntry.DAttributes = 0x00;
+            SVMDateTime date;
+            if(VM_STATUS_SUCCESS != VMDateTime(&date)){
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_FAILURE;
+            }
+             
+            newDirEntry.DCreate = date;
+            newDirEntry.DAccess = date;
+            newDirEntry.DModify = date;    
+            
+            //find first free cluster number and replace fat with fff8
+            int clusterNum = 0;
+            for(int i = 0; i < FAT.size(); i++){
+                if(FAT[i] == 0x0000){
+                    clusterNum = i;
+                    FAT[i] = 0xfff8;
+                    break;
+                }
+            }
+                    
+            Entry* newEntry = new Entry(newDirEntry, clusterNum, NEXT_FILE_DESCRIPTOR++);
+            if((flags & O_RDWR) == O_RDWR){
+                newEntry->writeable = 1;
+            }
+            else{
+                newEntry->writeable = 0;
+            }
+            
+            ROOT.push_back(newEntry);
+            openEntries.push_back(newEntry);
+            *filedescriptor = ROOT[ROOT.size()-1]->descriptor;
         }
-        else{
-            newEntry->writeable = 0;
-        }
-        
-        ROOT.push_back(newEntry);
-        openEntries.push_back(newEntry);
-        *filedescriptor = ROOT[ROOT.size()-1]->descriptor;
     }
+    else{//not in ROOT directory
+        int currentSector = getPathSectorNumber(CURRENT_PATH);
+        void* sectorData;
+        VMMemoryPoolAllocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, theBPB->BPB_BytsPerSec, &sectorData);
+        readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, currentSector);
+
+        int offset = 0;
+        while (1) {
+            char temp[10];
+            memcpy(temp, (char*)sectorData + ((offset * 32) % sectorSize), 10);
+
+            if(temp[0] == 0x00){
+                openEntries[i]->fileOffset = 0;
+                MachineResumeSignals(&sigState);
+                return VM_STATUS_FAILURE;
+            }
+            memcpy(&entry.DAttributes, (char *)sectorData + ((offset * 32) % sectorSize) + 11, 1);
+        
+            if ((entry.DAttributes & 0x0F) == 0x0F) { // LFN
+                offset++;
+                if((offset * 32 / sectorSize) >= 1){
+                    currentClusterNumber = findCluster(currentClusterNumber, 1);
+                    sectorToRead = theBPB->FirstDataSector + ((currentClusterNumber - 2) * 2) + (offset / sectorSize);
+                    readSector(FAT_IMAGE_FILE_DESCRIPTOR, (char*)sectorData, sectorToRead);
+                }
+            }
+            else { // SFN
+//                        cout << "found a short file entry" << endl;
+                char *namePtr;
+                char *extPtr;
+                
+                char fileName[9] = "";
+                char *dummy1;
+                char *dummy2;
+                memcpy(fileName, (char *)sectorData+ ((offset * 32) % sectorSize) , 8);
+                fileName[8] = '\0';
+//                        cout << "filename is: " << (char*)fileName << endl;
+                namePtr = strtok_r(fileName, " ", &dummy1);
+//                        cout << "namePtr: " << namePtr << endl;
+                if(namePtr != '\0'){ // valid SHORT entry
+//                            cout << "namePtr: " << namePtr << endl;
+                    char fileExt[4] = "";
+                    memcpy(fileExt, (char *)sectorData+ ((offset * 32) % sectorSize) +8, 3);
+                    fileExt[3] = '\0';
+                    if (fileExt[0] != ' ') {
+                        extPtr = strtok_r(fileExt, " ", &dummy2); // returns a ptr that points to the first byte of the file extension
+                        if(extPtr != '\0'){
+                            strcat(namePtr, ".");
+                            strcat(namePtr, extPtr);
+                        }
+                    }
+                    if(!strcmp(namePtr,filename)) {
+                        offset++;
+                        break;
+                    }
+//                            cout << "srlen(namePtr): " << strlen(namePtr) << endl;
+                    memcpy(entry.DShortFileName, namePtr, strlen(namePtr)+1);
+                    memcpy(entry.DLongFileName, namePtr, strlen(namePtr)+1);
+                    
+                    memcpy(&(entry.DSize), (char *)sectorData+ ((offset * 32) % sectorSize) +28, 4);
+                    
+                    SVMDateTime create;
+                    SVMDateTime access;
+                    SVMDateTime modify;
+                    
+                    uint16_t createDate;
+                    memcpy(&createDate, (char *)sectorData+ ((offset * 32) % sectorSize) +16, 2);
+                    
+                    // 0-4 day of month: range 1-31
+                    // 5-8 month of year: range 1-12
+                    // 9-15 number of years since 1980: range 0-127
+                    create.DDay = createDate & 0x001F; // or 0x001F
+                    create.DMonth = (createDate & 0x01E0) >> 5;
+                    create.DYear = ((createDate & 0xFE00) >> 9)+ 1980;
+                    uint16_t time;
+                    memcpy(&time, (char *)sectorData+ ((offset * 32) % sectorSize) +14, 2);
+                    create.DSecond = (time & 0x1F) * 2;
+                    create.DMinute = (time & 0x7E0) >> 5;
+                    create.DHour = (time & 0xF800) >> 11;
+                    
+                    memcpy(&create.DHundredth, (char *)sectorData+ ((offset * 32) % sectorSize) +13, 1); // add 1 second if necessary then % 100
+                    
+                    create.DSecond += (create.DHundredth / 100);
+                    create.DHundredth = create.DHundredth % 100;
+                    //                    cout << "CREATE" << endl;
+                    //                   VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",create.DYear, create.DMonth, create.DDay, (create.DHour % 12) ? (create.DHour % 12) : 12 , create.DMinute, create.DSecond, create.DHundredth, create.DHour >= 12 ? "PM" : "AM");
+                    
+                    
+                    uint16_t accessDate;
+                    memcpy(&accessDate, (char *)sectorData+ ((offset * 32) % sectorSize) +18, 2);
+                    
+                    // 0-4 day of month: range 1-31
+                    // 5-8 month of year: range 1-12
+                    // 9-15 number of years since 1980: range 0-127
+                    access.DDay = accessDate & 0x001F; // or 0x001F
+                    access.DMonth = (accessDate & 0x01E0) >> 5;
+                    access.DYear = ((accessDate & 0xFE00) >> 9)+ 1980;
+                    
+                    access.DSecond = 0;
+                    access.DMinute = 0;
+                    access.DHour = 0;
+                    access.DHundredth = 0;
+                    //                    cout << "ACCESS" << endl;
+                    //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",access.DYear, access.DMonth, access.DDay, (access.DHour % 12) ? (access.DHour % 12) : 12 , access.DMinute, access.DSecond, access.DHundredth, access.DHour >= 12 ? "PM" : "AM");
+                    
+                    uint16_t modifyDate;
+                    memcpy(&modifyDate, (char *)sectorData+ ((offset * 32) % sectorSize) +24, 2);
+                    
+                    // 0-4 day of month: range 1-31
+                    // 5-8 month of year: range 1-12
+                    // 9-15 number of years since 1980: range 0-127
+                    modify.DDay = modifyDate & 0x001F; // or 0x001F
+                    modify.DMonth = (modifyDate & 0x01E0) >> 5;
+                    modify.DYear = ((modifyDate & 0xFE00) >> 9)+ 1980;
+                    uint16_t modifyTime;
+                    memcpy(&modifyTime, (char *)sectorData+ ((offset * 32) % sectorSize) +22, 2);
+                    modify.DSecond = (modifyTime & 0x1F) * 2;
+                    modify.DMinute = (modifyTime & 0x7E0) >> 5;
+                    modify.DHour = (modifyTime & 0xF800) >> 11;
+                    
+                    modify.DHundredth = 0;
+                    //                    cout << "MODIFY" << endl;
+                    //                    VMPrint("%04d/%02d/%02d %02d:%02d:%02d.%02d %s ",modify.DYear, modify.DMonth, modify.DDay, (modify.DHour % 12) ? (modify.DHour % 12) : 12 , modify.DMinute, modify.DSecond, modify.DHundredth, modify.DHour >= 12 ? "PM" : "AM");
+                    //                    cout << endl;
+                    
+                    entry.DCreate = create;
+                    entry.DAccess = access;
+                    entry.DModify = modify;
+                    
+                    uint16_t firstClusterStart;
+                    memcpy(&firstClusterStart, (char *)sectorData+ ((offset * 32) % sectorSize) +26, 2);
+
+                    //find first free cluster number and replace fat with fff8
+                    int clusterNum = 0;
+                    for(int j = 0; j < FAT.size(); j++){
+                        if(FAT[j] == 0x0000){
+                            clusterNum = j;
+                            FAT[j] = 0xfff8;
+                            break;
+                        }
+                    }
+
+                    
+                    Entry* theEntry = new Entry(entry, clusterNum, NEXT_FILE_DESCRIPTOR++);
+
+                    openEntries.push_back(theEntry);
+                    VMMemoryPoolDeallocate(VM_MEMORY_POOL_ID_SHARED_MEMORY, sectorData);
+                    MachineResumeSignals(&sigState);
+                    return VM_STATUS_SUCCESS;
+                }
+                else {
+                    cout << "else...I don't think it should be here" << endl;
+                    offset++;
+                }
+            }
+        }
+
+
+
+    }
+
     
     // SCHEDULE SOMEWHERE???
     
@@ -960,6 +1125,30 @@ TVMStatus VMFileOpen(const char *filename, int flags, int mode, int *filedescrip
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
+}
+
+int getPathSectorNumber(char* path){
+    char* saveptr
+    char* token = strtok_r(path, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+    int result;
+    int apps;
+    for(int i = 1; i < ROOT.size(); i++){
+        if(!strcmp(ROOT[i]->e.DShortFileName, "APPS")){
+            apps = (ROOT[i]->firstClusterNumber - 2) * theBPB->BPB_SecPerClus + theBPB->FirstDataSector;
+            break;
+        }
+    }
+
+    while(token != NULL){
+        if(!strcmp(token, "APPS")){
+            result = apps; 
+        }
+        else if(!strcmp(token, "..")){
+            result = theBPB->FirstRootSector;
+        }
+        token = strtok_r(NULL, VM_FILE_SYSTEM_DIRECTORY_DELIMETER, &saveptr);
+    }
+    return result;
 }
 
 TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
