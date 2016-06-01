@@ -87,7 +87,7 @@ void VMMain(int argc, char *argv[]){
                     }
                     VMPrint("%-13s %s\n",DirectoryEntry.DShortFileName, DirectoryEntry.DLongFileName);
                }
-//                VMDirectoryClose(DirDescriptor);
+                VMDirectoryClose(DirDescriptor);
             }
             else{
                 VMPrint("Failed to open directory %s!\n", DirectoryName);   

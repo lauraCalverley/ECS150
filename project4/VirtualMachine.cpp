@@ -970,7 +970,6 @@ TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
     
     bool dirFound = 0;
     int currentCluster;
-
     if(!strcmp(dirname, "/")){
         ROOT[0]->descriptor = NEXT_FILE_DESCRIPTOR++;
         openEntries.push_back(ROOT[0]);
@@ -978,8 +977,7 @@ TVMStatus VMDirectoryOpen(const char *dirname, int *dirdescriptor) {
         MachineResumeSignals(&sigState);
         return VM_STATUS_SUCCESS;
     }
-    
-    char *name;
+    char name[VM_FILE_SYSTEM_MAX_PATH];
     VMFileSystemFileFromFullPath(name, dirname);
     for (int i=0; i < ROOT.size(); i++) {
         if (strcmp((ROOT[i]->e.DShortFileName),name) == 0) { //find matching dir -- ROOT[i]
@@ -1053,14 +1051,12 @@ TVMStatus VMDirectoryCurrent(char *abspath) {
 TVMStatus VMDirectoryRead(int dirdescriptor, SVMDirectoryEntryRef dirent){
     TMachineSignalState sigState;
     MachineSuspendSignals(&sigState);
-
     if(dirent == NULL){
         MachineResumeSignals(&sigState);
         return VM_STATUS_ERROR_INVALID_PARAMETER;
     }
 //    cout << "dirdescriptor: " << dirdescriptor << endl;
 //    cout << "ROOT[0]->descriptor: " << ROOT[0]->descriptor << endl;
-
     for (int i=0; i < openEntries.size(); i++) {
         if ((openEntries[i]->descriptor) == dirdescriptor) { //find matching directory -- ROOT[i]
 //            cout << "found matching descriptor" << endl;
